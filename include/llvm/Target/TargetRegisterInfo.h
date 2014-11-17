@@ -19,7 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Printable.h"
@@ -94,10 +94,14 @@ public:
 
   /// Return the size of the register in bytes, which is also the size
   /// of a stack slot allocated to hold a spilled copy of this register.
-  unsigned getSize() const { return MC->getSizeInBits() / 8; }
+  unsigned getSize() const {
+    return MC->getSizeInBits() / EVT::getBitsPerByte();
+  }
 
   /// Return the minimum required alignment for a register of this class.
-  unsigned getAlignment() const { return MC->getAlignmentInBits() / 8; }
+  unsigned getAlignment() const {
+    return MC->getAlignmentInBits() / EVT::getBitsPerByte();
+  }
 
   /// Return the cost of copying a value between two registers in this class.
   /// A negative number means the register class is very expensive
