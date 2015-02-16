@@ -1025,16 +1025,16 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   for (const auto &RC : RegisterClasses) {
     // Asserts to make sure values will fit in table assuming types from
     // MCRegisterInfo.h
-    assert((RC.SpillSize/8) <= 0xffff && "SpillSize too large.");
-    assert((RC.SpillAlignment/8) <= 0xffff && "SpillAlignment too large.");
+    assert((RC.SpillSize) <= 0xffff && "SpillSize too large.");
+    assert((RC.SpillAlignment) <= 0xffff && "SpillAlignment too large.");
     assert(RC.CopyCost >= -128 && RC.CopyCost <= 127 && "Copy cost too large.");
 
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << RegClassStrings.get(RC.getName()) << ", "
        << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
        << RC.getQualifiedName() + "RegClassID" << ", "
-       << RC.SpillSize/8 << ", "
-       << RC.SpillAlignment/8 << ", "
+       << RC.SpillSize << ", "
+       << RC.SpillAlignment << ", "
        << RC.CopyCost << ", "
        << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }
