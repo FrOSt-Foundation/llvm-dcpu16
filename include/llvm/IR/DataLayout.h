@@ -103,6 +103,8 @@ class DataLayout {
 private:
   /// Defaults to false.
   bool BigEndian;
+  unsigned      BitsPerByte;           ///< Number of bits in an addressable
+                                       ///< byte. Defaults to 8.
 
   unsigned StackNaturalAlign;
 
@@ -200,6 +202,7 @@ public:
     StringRepresentation = DL.StringRepresentation;
     BigEndian = DL.isBigEndian();
     StackNaturalAlign = DL.StackNaturalAlign;
+    BitsPerByte = DL.BitsPerByte;
     ManglingMode = DL.ManglingMode;
     LegalIntWidths = DL.LegalIntWidths;
     Alignments = DL.Alignments;
@@ -221,17 +224,16 @@ public:
   bool isBigEndian() const { return BigEndian; }
 
   /// Convert number of bytes into number of bits.
-  static uint64_t inBits(uint64_t Bytes) {
-    return Bytes * 8;
+  uint64_t inBits(uint64_t Bytes) const {
+    return Bytes * BitsPerByte;
   }
   /// Convert number of bits into number of bytes. Optionally, return the
   /// ceiling value. Oterwise, check that the number is a even byte width
   /// multiple.
-  static uint64_t inBytes(uint64_t Bits, bool ceil = false) {
-    if (!(ceil || Bits % 8 == 0))
+  uint64_t inBytes(uint64_t Bits, bool ceil = false) const {
+    if (!(ceil || Bits % BitsPerByte == 0))
       report_fatal_error("number of bits must be a byte width multiple");
-
-    return (Bits + 7) / 8;
+    return (Bits + BitsPerByte - 1) / BitsPerByte;
   }
 
   /// \brief Returns the string representation of the DataLayout.
@@ -516,7 +518,6 @@ class StructLayout {
 public:
   uint64_t getSizeInBytes() const { return StructSize; }
 
-  uint64_t getSizeInBits() const { return DataLayout::inBits(StructSize); }
   unsigned getAlignment() const { return StructAlignment; }
 
   /// Returns whether the struct has padding or not between its fields.

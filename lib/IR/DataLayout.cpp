@@ -181,6 +181,7 @@ void DataLayout::reset(StringRef Desc) {
   LayoutMap = nullptr;
   BigEndian = false;
   StackNaturalAlign = 0;
+  BitsPerByte = 8;
   ManglingMode = MM_None;
   NonIntegralAddressSpaces.clear();
 
@@ -350,6 +351,13 @@ void DataLayout::parseSpecifier(StringRef Desc) {
       break;
     case 'S': { // Stack natural alignment.
       StackNaturalAlign = inBytes(getInt(Tok));
+      break;
+    }
+    case 'B': { // byte size
+      // Note: 'B' has to be specified *before* other specifiers that depend on
+      // the byte size. That is, p, i, v, f, a, s, and n. Otherwise, the default
+      // value of 8 bits will be used for the calculating the alignment numbers.
+      BitsPerByte = getInt(Tok);
       break;
     }
     case 'm':
