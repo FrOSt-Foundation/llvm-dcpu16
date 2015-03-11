@@ -186,7 +186,7 @@ static bool isDenselyPacked(Type *type, const DataLayout &DL) {
     Type *ElTy = StructTy->getElementType(i);
     if (!isDenselyPacked(ElTy, DL))
       return false;
-    if (StartPos != Layout->getElementOffsetInBits(i))
+    if (StartPos != DL.inBits(Layout->getElementOffset(i)))
       return false;
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }

@@ -517,7 +517,6 @@ public:
   uint64_t getSizeInBytes() const { return StructSize; }
 
   uint64_t getSizeInBits() const { return DataLayout::inBits(StructSize); }
-
   unsigned getAlignment() const { return StructAlignment; }
 
   /// Returns whether the struct has padding or not between its fields.
@@ -531,10 +530,6 @@ public:
   uint64_t getElementOffset(unsigned Idx) const {
     assert(Idx < NumElements && "Invalid element idx!");
     return MemberOffsets[Idx];
-  }
-
-  uint64_t getElementOffsetInBits(unsigned Idx) const {
-    return DataLayout::inBits(getElementOffset(Idx));
   }
 
 private:
@@ -558,7 +553,7 @@ inline uint64_t DataLayout::getTypeSizeInBits(Type *Ty) const {
   }
   case Type::StructTyID:
     // Get the layout annotation... which is lazily created on demand.
-    return getStructLayout(cast<StructType>(Ty))->getSizeInBits();
+    return inBits(getStructLayout(cast<StructType>(Ty))->getSizeInBytes());
   case Type::IntegerTyID:
     return Ty->getIntegerBitWidth();
   case Type::HalfTyID:
