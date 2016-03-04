@@ -220,6 +220,20 @@ public:
   bool isLittleEndian() const { return !BigEndian; }
   bool isBigEndian() const { return BigEndian; }
 
+  /// Convert number of bytes into number of bits.
+  static uint64_t inBits(uint64_t Bytes) {
+    return Bytes * 8;
+  }
+  /// Convert number of bits into number of bytes. Optionally, return the
+  /// ceiling value. Oterwise, check that the number is a even byte width
+  /// multiple.
+  static uint64_t inBytes(uint64_t Bits, bool ceil = false) {
+    if (!(ceil || Bits % 8 == 0))
+      report_fatal_error("number of bits must be a byte width multiple");
+
+    return (Bits + 7) / 8;
+  }
+
   /// \brief Returns the string representation of the DataLayout.
   ///
   /// This representation is in the same format accepted by the string
@@ -347,7 +361,7 @@ public:
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
-    return getPointerSize(AS) * 8;
+    return inBits(getPointerSize(AS));
   }
 
   /// Layout pointer size, in bits, based on the type.  If this function is
@@ -389,7 +403,7 @@ public:
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   uint64_t getTypeStoreSize(Type *Ty) const {
-    return (getTypeSizeInBits(Ty) + 7) / 8;
+    return inBytes(getTypeSizeInBits(Ty), /*ceil=*/true);
   }
 
   /// \brief Returns the maximum number of bits that may be overwritten by
@@ -397,7 +411,7 @@ public:
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
   uint64_t getTypeStoreSizeInBits(Type *Ty) const {
-    return 8 * getTypeStoreSize(Ty);
+    return inBits(getTypeStoreSize(Ty));
   }
 
   /// \brief Returns the offset in bytes between successive objects of the
@@ -416,7 +430,7 @@ public:
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 96 or 128 for x86_fp80, depending on alignment.
   uint64_t getTypeAllocSizeInBits(Type *Ty) const {
-    return 8 * getTypeAllocSize(Ty);
+    return inBits(getTypeAllocSize(Ty));
   }
 
   /// \brief Returns the minimum ABI-required alignment for the specified type.
@@ -502,7 +516,7 @@ class StructLayout {
 public:
   uint64_t getSizeInBytes() const { return StructSize; }
 
-  uint64_t getSizeInBits() const { return 8 * StructSize; }
+  uint64_t getSizeInBits() const { return DataLayout::inBits(StructSize); }
 
   unsigned getAlignment() const { return StructAlignment; }
 
@@ -520,7 +534,7 @@ public:
   }
 
   uint64_t getElementOffsetInBits(unsigned Idx) const {
-    return getElementOffset(Idx) * 8;
+    return DataLayout::inBits(getElementOffset(Idx));
   }
 
 private:
