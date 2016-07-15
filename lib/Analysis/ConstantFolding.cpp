@@ -321,11 +321,23 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
 
 namespace {
 
+// Read a byte from Val at Offset. Only 8 and 16-bit bytes are supported.
+static uint16_t ReadByteFromVal(uint64_t Val, unsigned Offset,
+                                unsigned BitsPerByte) {
+  assert(Offset * BitsPerByte < 64);
+  uint16_t Byte = Val >> Offset * BitsPerByte;
+  if (BitsPerByte == 8)
+    return uint8_t(Byte);
+  if (BitsPerByte == 16)
+    return uint16_t(Byte);
+  llvm_unreachable("Unsupported bytesize");
+}
+
 /// Recursive helper to read bits out of global. C is the constant being copied
 /// out of. ByteOffset is an offset into C. CurPtr is the pointer to copy
 /// results into and BytesLeft is the number of bytes left in
 /// the CurPtr buffer. DL is the DataLayout.
-bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
+bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, uint16_t *CurPtr,
                         unsigned BytesLeft, const DataLayout &DL) {
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
@@ -348,7 +360,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
       int n = ByteOffset;
       if (!DL.isLittleEndian())
         n = IntBytes - n - 1;
-      CurPtr[i] = (unsigned char)(Val >> (n * 8));
+      CurPtr[i] = ReadByteFromVal(Val, n, BitsPerByte);
       ++ByteOffset;
     }
     return true;
@@ -480,7 +492,9 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
     return nullptr;
   }
 
-  unsigned BytesLoaded = (IntType->getBitWidth() + 7) / 8;
+  unsigned BitsPerByte = DL.getBitsPerByte();
+  unsigned BytesLoaded =
+    (IntType->getBitWidth() + (BitsPerByte-1)) / BitsPerByte;
   if (BytesLoaded > 32 || BytesLoaded == 0)
     return nullptr;
 
@@ -505,8 +519,8 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
   if (Offset >= InitializerSize)
     return UndefValue::get(IntType);
 
-  unsigned char RawBytes[32] = {0};
-  unsigned char *CurPtr = RawBytes;
+  uint16_t RawBytes[32] = {0};
+  uint16_t *CurPtr = RawBytes;
   unsigned BytesLeft = BytesLoaded;
 
   // If we're loading off the beginning of the global, some bytes may be valid.
@@ -523,13 +537,13 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
   if (DL.isLittleEndian()) {
     ResultVal = RawBytes[BytesLoaded - 1];
     for (unsigned i = 1; i != BytesLoaded; ++i) {
-      ResultVal <<= 8;
+      ResultVal <<= BitsPerByte;
       ResultVal |= RawBytes[BytesLoaded - 1 - i];
     }
   } else {
     ResultVal = RawBytes[0];
     for (unsigned i = 1; i != BytesLoaded; ++i) {
-      ResultVal <<= 8;
+      ResultVal <<= BitsPerByte;
       ResultVal |= RawBytes[i];
     }
   }
