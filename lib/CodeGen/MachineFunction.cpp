@@ -977,7 +977,7 @@ unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:
   case MachineJumpTableInfo::EK_Custom32:
-    return 4;
+    return 32 / TD.getBitsPerByte();
   case MachineJumpTableInfo::EK_Inline:
     return 0;
   }

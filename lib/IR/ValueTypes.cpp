@@ -19,6 +19,8 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
+unsigned EVT::BitsPerByte = 8;
+
 EVT EVT::changeExtendedTypeToInteger() const {
   LLVMContext &Context = LLVMTy->getContext();
   return getIntegerVT(Context, getSizeInBits());

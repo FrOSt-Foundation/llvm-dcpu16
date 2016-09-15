@@ -1391,11 +1391,12 @@ static Value *getNaturalGEPRecursively(IRBuilderTy &IRB, const DataLayout &DL,
   // over a vector from the IR completely.
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty)) {
     unsigned ElementSizeInBits = DL.getTypeSizeInBits(VecTy->getScalarType());
-    if (ElementSizeInBits % 8 != 0) {
+    unsigned BitsPerByte = DL.getBitsPerByte();
+    if (ElementSizeInBits % BitsPerByte != 0) {
       // GEPs over non-multiple of 8 size vector elements are invalid.
       return nullptr;
     }
-    APInt ElementSize(Offset.getBitWidth(), ElementSizeInBits / 8);
+    APInt ElementSize(Offset.getBitWidth(), ElementSizeInBits / BitsPerByte);
     APInt NumSkippedElements = Offset.sdiv(ElementSize);
     if (NumSkippedElements.ugt(VecTy->getNumElements()))
       return nullptr;
@@ -1455,7 +1456,8 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
 
   // Don't consider any GEPs through an i8* as natural unless the TargetTy is
   // an i8.
-  if (Ty == IRB.getInt8PtrTy(Ty->getAddressSpace()) && TargetTy->isIntegerTy(8))
+  unsigned BitsPerByte = DL.getBitsPerByte();
+  if (Ty == IRB.getInt8PtrTy(Ty->getAddressSpace()) && TargetTy->isIntegerTy(BitsPerByte))
     return nullptr;
 
   Type *ElementTy = Ty->getElementType();
@@ -1478,7 +1480,7 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
 /// This tries very hard to compute a "natural" GEP which arrives at the offset
 /// and produces the pointer type desired. Where it cannot, it will try to use
 /// the natural GEP to arrive at the offset and bitcast to the type. Where that
-/// fails, it will try to use an existing i8* and GEP to the byte offset and
+/// fails, it will try to use an existing byte pointer and GEP to the byte offset and
 /// bitcast to the type.
 ///
 /// The strategy for finding the more natural GEPs is to peel off layers of the
@@ -1501,10 +1503,10 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
   Value *OffsetPtr = nullptr;
   Value *OffsetBasePtr;
 
-  // Remember any i8 pointer we come across to re-use if we need to do a raw
+  // Remember any byte pointer we come across to re-use if we need to do a raw
   // byte offset.
-  Value *Int8Ptr = nullptr;
-  APInt Int8PtrOffset(Offset.getBitWidth(), 0);
+  Value *IntBytePtr = nullptr;
+  APInt IntBytePtrOffset(Offset.getBitWidth(), 0);
 
   Type *TargetTy = PointerTy->getPointerElementType();
 
@@ -1539,10 +1541,10 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
         return P;
     }
 
-    // Stash this pointer if we've found an i8*.
-    if (Ptr->getType()->isIntegerTy(8)) {
-      Int8Ptr = Ptr;
-      Int8PtrOffset = Offset;
+    // Stash this pointer if we've found a byte pointer.
+    if (Ptr->getType()->isIntegerTy(DL.getBitsPerByte())) {
+      IntBytePtr = Ptr;
+      IntBytePtrOffset = Offset;
     }
 
     // Peel off a layer of the pointer and update the offset appropriately.
@@ -1559,22 +1561,22 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
   } while (Visited.insert(Ptr).second);
 
   if (!OffsetPtr) {
-    if (!Int8Ptr) {
-      Int8Ptr = IRB.CreateBitCast(
-          Ptr, IRB.getInt8PtrTy(PointerTy->getPointerAddressSpace()),
+    if (!IntBytePtr) {
+      IntBytePtr = IRB.CreateBitCast(
+          Ptr, IRB.getIntByteSizePtrTy(PointerTy->getPointerAddressSpace()),
           NamePrefix + "sroa_raw_cast");
-      Int8PtrOffset = Offset;
+      IntBytePtrOffset = Offset;
     }
 
-    OffsetPtr = Int8PtrOffset == 0
-                    ? Int8Ptr
-                    : IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Int8Ptr,
-                                            IRB.getInt(Int8PtrOffset),
+    OffsetPtr = IntBytePtrOffset == 0
+    ? IntBytePtr
+    : IRB.CreateInBoundsGEP(IRB.getIntNTy(DL.getBitsPerByte()),
+                            IntBytePtr, IRB.getInt(IntBytePtrOffset),
                                             NamePrefix + "sroa_raw_idx");
   }
   Ptr = OffsetPtr;
 
-  // On the off chance we were targeting i8*, guard the bitcast here.
+  // On the off chance we were targeting a byte pointer, guard the bitcast here.
   if (Ptr->getType() != PointerTy)
     Ptr = IRB.CreateBitCast(Ptr, PointerTy, NamePrefix + "sroa_cast");
 
@@ -2013,9 +2015,10 @@ static Value *extractInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
   IntegerType *IntTy = cast<IntegerType>(V->getType());
   assert(DL.getTypeStoreSize(Ty) + Offset <= DL.getTypeStoreSize(IntTy) &&
          "Element extends past full value");
-  uint64_t ShAmt = 8 * Offset;
+  unsigned BitsPerByte = DL.getBitsPerByte();
+  uint64_t ShAmt = BitsPerByte*Offset;
   if (DL.isBigEndian())
-    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
+    ShAmt = BitsPerByte * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
   if (ShAmt) {
     V = IRB.CreateLShr(V, ShAmt, Name + ".shift");
     DEBUG(dbgs() << "     shifted: " << *V << "\n");
@@ -2042,9 +2045,10 @@ static Value *insertInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
   }
   assert(DL.getTypeStoreSize(Ty) + Offset <= DL.getTypeStoreSize(IntTy) &&
          "Element store outside of alloca store");
-  uint64_t ShAmt = 8 * Offset;
+  unsigned BitsPerByte = DL.getBitsPerByte();
+  uint64_t ShAmt = BitsPerByte*Offset;
   if (DL.isBigEndian())
-    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
+    ShAmt = BitsPerByte * (DL.getTypeStoreSize(IntTy) - DL.getTypeStoreSize(Ty) - Offset);
   if (ShAmt) {
     V = IRB.CreateShl(V, ShAmt, Name + ".shift");
     DEBUG(dbgs() << "     shifted: " << *V << "\n");
@@ -2216,8 +2220,9 @@ public:
         OldPtr(), PHIUsers(PHIUsers), SelectUsers(SelectUsers),
         IRB(NewAI.getContext(), ConstantFolder()) {
     if (VecTy) {
-      assert((DL.getTypeSizeInBits(ElementTy) % 8) == 0 &&
-             "Only multiple-of-8 sized vector elements are viable");
+      unsigned BitsPerByte = DL.getBitsPerByte();
+      assert((DL.getTypeSizeInBits(ElementTy) % BitsPerByte) == 0 &&
+             "Only multiple-of-byte sized vector elements are viable");
       ++NumVectorized;
     }
     assert((!IntTy && !VecTy) || (IntTy && !VecTy) || (!IntTy && VecTy));
@@ -2348,8 +2353,9 @@ private:
     V = convertValue(DL, IRB, V, IntTy);
     assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+    unsigned BitsPerByte = DL.getBitsPerByte();
     if (Offset > 0 || NewEndOffset < NewAllocaEndOffset) {
-      IntegerType *ExtractTy = Type::getIntNTy(LI.getContext(), SliceSize * 8);
+      IntegerType *ExtractTy = Type::getIntNTy(LI.getContext(), SliceSize * BitsPerByte);
       V = extractInteger(DL, IRB, V, ExtractTy, Offset, "extract");
     }
     // It is possible that the extracted type is not the load type. This
@@ -2357,9 +2363,9 @@ private:
     // a consequence the slice is narrower but still a candidate for integer
     // lowering. To handle this case, we just zero extend the extracted
     // integer.
-    assert(cast<IntegerType>(LI.getType())->getBitWidth() >= SliceSize * 8 &&
+    assert(cast<IntegerType>(LI.getType())->getBitWidth() >= SliceSize * BitsPerByte &&
            "Can only handle an extract for an overly wide load");
-    if (cast<IntegerType>(LI.getType())->getBitWidth() > SliceSize * 8)
+    if (cast<IntegerType>(LI.getType())->getBitWidth() > SliceSize * BitsPerByte)
       V = IRB.CreateZExt(V, LI.getType());
     return V;
   }
@@ -2369,7 +2375,9 @@ private:
     Value *OldOp = LI.getOperand(0);
     assert(OldOp == OldPtr);
 
-    Type *TargetTy = IsSplit ? Type::getIntNTy(LI.getContext(), SliceSize * 8)
+    unsigned BitsPerByte = DL.getBitsPerByte();
+    Type *TargetTy = IsSplit ? Type::getIntNTy(LI.getContext(), SliceSize * BitsPerByte)
+
                              : LI.getType();
     const bool IsLoadPastEnd = DL.getTypeStoreSize(TargetTy) > SliceSize;
     bool IsPtrAdjusted = false;
@@ -2509,9 +2517,9 @@ private:
       assert(V->getType()->getIntegerBitWidth() ==
                  DL.getTypeStoreSizeInBits(V->getType()) &&
              "Non-byte-multiple bit width");
-      IntegerType *NarrowTy = Type::getIntNTy(SI.getContext(), SliceSize * 8);
-      V = extractInteger(DL, IRB, V, NarrowTy, NewBeginOffset - BeginOffset,
-                         "extract");
+      unsigned BitsPerByte = DL.getBitsPerByte();
+      IntegerType *NarrowTy = Type::getIntNTy(SI.getContext(), SliceSize * BitsPerByte);
+      V = extractInteger(DL, IRB, V, NarrowTy, NewBeginOffset - BeginOffset, "extract");
     }
 
     if (VecTy)
@@ -2563,16 +2571,17 @@ private:
   /// call this routine.
   /// FIXME: Heed the advice above.
   ///
-  /// \param V The i8 value to splat.
+  /// \param V The byte value to splat.
   /// \param Size The number of bytes in the output (assuming i8 is one byte)
   Value *getIntegerSplat(Value *V, unsigned Size) {
     assert(Size > 0 && "Expected a positive number of bytes.");
     IntegerType *VTy = cast<IntegerType>(V->getType());
-    assert(VTy->getBitWidth() == 8 && "Expected an i8 value for the byte");
+    unsigned BitsPerByte = DL.getBitsPerByte();
+    assert(VTy->getBitWidth() == BitsPerByte && "Expected a byte");
     if (Size == 1)
       return V;
 
-    Type *SplatIntTy = Type::getIntNTy(VTy->getContext(), Size * 8);
+    Type *SplatIntTy = Type::getIntNTy(VTy->getContext(), Size * BitsPerByte);
     V = IRB.CreateMul(
         IRB.CreateZExt(V, SplatIntTy, "zext"),
         ConstantExpr::getUDiv(
@@ -2615,12 +2624,13 @@ private:
 
     // If this doesn't map cleanly onto the alloca type, and that type isn't
     // a single value type, just emit a memset.
+    unsigned BitsPerByte = DL.getBitsPerByte();
     if (!VecTy && !IntTy &&
         (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
          SliceSize != DL.getTypeStoreSize(AllocaTy) ||
          !AllocaTy->isSingleValueType() ||
          !DL.isLegalInteger(DL.getTypeSizeInBits(ScalarTy)) ||
-         DL.getTypeSizeInBits(ScalarTy) % 8 != 0)) {
+         DL.getTypeSizeInBits(ScalarTy) % BitsPerByte != 0)) {
       Type *SizeTy = II.getLength()->getType();
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
       CallInst *New = IRB.CreateMemSet(
@@ -2649,7 +2659,7 @@ private:
       assert(NumElements <= VecTy->getNumElements() && "Too many elements!");
 
       Value *Splat =
-          getIntegerSplat(II.getValue(), DL.getTypeSizeInBits(ElementTy) / 8);
+          getIntegerSplat(II.getValue(), DL.getTypeSizeInBits(ElementTy) / BitsPerByte);
       Splat = convertValue(DL, IRB, Splat, ElementTy);
       if (NumElements > 1)
         Splat = getVectorSplat(Splat, NumElements);
@@ -2682,7 +2692,7 @@ private:
       assert(NewBeginOffset == NewAllocaBeginOffset);
       assert(NewEndOffset == NewAllocaEndOffset);
 
-      V = getIntegerSplat(II.getValue(), DL.getTypeSizeInBits(ScalarTy) / 8);
+      V = getIntegerSplat(II.getValue(), DL.getTypeSizeInBits(ScalarTy) / BitsPerByte);
       if (VectorType *AllocaVecTy = dyn_cast<VectorType>(AllocaTy))
         V = getVectorSplat(V, AllocaVecTy->getNumElements());
 
@@ -2805,8 +2815,9 @@ private:
     unsigned BeginIndex = VecTy ? getIndex(NewBeginOffset) : 0;
     unsigned EndIndex = VecTy ? getIndex(NewEndOffset) : 0;
     unsigned NumElements = EndIndex - BeginIndex;
-    IntegerType *SubIntTy =
-        IntTy ? Type::getIntNTy(IntTy->getContext(), Size * 8) : nullptr;
+    unsigned BitsPerByte = DL.getBitsPerByte();
+    IntegerType *SubIntTy
+      = IntTy ? Type::getIntNTy(IntTy->getContext(), Size * BitsPerByte) : nullptr;
 
     // Reset the other pointer type to match the register type we're going to
     // use, but using the address space of the original other pointer.
@@ -3806,7 +3817,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
   // Try to compute a friendly type for this partition of the alloca. This
   // won't always succeed, in which case we fall back to a legal integer type
-  // or an i8 array of an appropriate size.
+  // or a byte array of an appropriate size.
   Type *SliceTy = nullptr;
   const DataLayout &DL = AI.getModule()->getDataLayout();
   if (Type *CommonUseTy = findCommonType(P.begin(), P.end(), P.endOffset()))
@@ -3816,12 +3827,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size()))
       SliceTy = TypePartitionTy;
+  unsigned BitsPerByte = DL.getBitsPerByte();
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
-      DL.isLegalInteger(P.size() * 8))
-    SliceTy = Type::getIntNTy(*C, P.size() * 8);
+      DL.isLegalInteger(P.size() * BitsPerByte))
+    SliceTy = Type::getIntNTy(*C, P.size() * BitsPerByte);
   if (!SliceTy)
-    SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
+    SliceTy = ArrayType::get(Type::getIntNTy(*C, BitsPerByte), P.size());
   assert(DL.getTypeAllocSize(SliceTy) >= P.size());
 
   bool IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);

@@ -378,7 +378,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
     return 1;
 
   // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
+  unsigned SrcBytes = LT.second.getStoreSize(8);
   if (!SrcBytes || !Alignment || Alignment >= SrcBytes)
     return Cost;
 

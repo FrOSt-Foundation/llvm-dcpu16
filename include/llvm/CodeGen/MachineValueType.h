@@ -516,16 +516,25 @@ class MVT {
       return getScalarType().getSizeInBits();
     }
 
+    /// getSize - Return the size of the specified value type in bytes.
+    unsigned getSize(unsigned BitsPerByte = 8) const {
+      unsigned Size = getSizeInBits() / BitsPerByte;
+      // XXXpath: When do we want this function, instead of getStoreSize? For
+      // example, for i1?
+      assert(Size == getStoreSize(BitsPerByte));
+      return Size;
+    }
+
     /// getStoreSize - Return the number of bytes overwritten by a store
     /// of the specified value type.
-    unsigned getStoreSize() const {
-      return (getSizeInBits() + 7) / 8;
+    unsigned getStoreSize(unsigned BitsPerByte = 8) const {
+      return (getSizeInBits() + (BitsPerByte - 1)) / BitsPerByte;
     }
 
     /// getStoreSizeInBits - Return the number of bits overwritten by a store
     /// of the specified value type.
-    unsigned getStoreSizeInBits() const {
-      return getStoreSize() * 8;
+    unsigned getStoreSizeInBits(unsigned BitsPerByte = 8) const {
+      return getStoreSize() * BitsPerByte ;
     }
 
     /// Return true if this has more bits than VT.

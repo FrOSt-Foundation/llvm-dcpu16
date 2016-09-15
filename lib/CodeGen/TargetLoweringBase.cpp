@@ -972,7 +972,7 @@ void TargetLoweringBase::initActions() {
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
                                                EVT) const {
-  return MVT::getIntegerVT(8 * DL.getPointerSize(0));
+  return MVT::getIntegerVT(DL.getBitsPerByte() * DL.getPointerSize(0));
 }
 
 EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,

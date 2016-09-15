@@ -349,6 +349,20 @@ void DIEValue::dump() const {
 // DIEInteger Implementation
 //===----------------------------------------------------------------------===//
 
+// Number of bytes to represent an address. (address_size)
+static uint64_t getAddrSize(const AsmPrinter *AP) {
+  // XXX: How to get DataLayout? The getDataLayout method
+  // relies on the MMI member being initialized. E.g when running
+  // dsymutil basic tests MMI is null.
+
+  if (AP->MMI != nullptr) {
+    const DataLayout &DL = AP->getDataLayout();
+    return DL.getMaxPointerSizeInOctets();
+  }
+  else
+    return AP->getPointerSize();
+}
+
 /// EmitValue - Emit integer of appropriate size.
 ///
 void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
@@ -519,7 +533,7 @@ unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->getPointerSize();
+  return getAddrSize(AP);
 }
 
 LLVM_DUMP_METHOD
@@ -541,7 +555,7 @@ unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->getPointerSize();
+  return getAddrSize(AP);
 }
 
 LLVM_DUMP_METHOD

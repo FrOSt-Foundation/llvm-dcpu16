@@ -1689,13 +1689,31 @@ void AsmPrinter::EmitInt8(int Value) const {
 /// EmitInt16 - Emit a short directive and value.
 ///
 void AsmPrinter::EmitInt16(int Value) const {
-  OutStreamer->EmitIntValue(Value, 2);
+  // XXX: How to get DataLayout? The getDataLayout method
+  // relies on the MMI member being initialized. E.g when running
+  // dsymutil basic tests MMI is null.
+  unsigned UnitSize;
+  if (MMI != nullptr)
+    UnitSize = getDataLayout().inBytes(16);
+  else
+    // Assume 8bit byte
+    UnitSize = 2;
+  OutStreamer->EmitIntValue(Value, UnitSize);
 }
 
 /// EmitInt32 - Emit a long directive and value.
 ///
 void AsmPrinter::EmitInt32(int Value) const {
-  OutStreamer->EmitIntValue(Value, 4);
+  // XXX: How to get DataLayout? The getDataLayout method
+  // relies on the MMI member being initialized. E.g when running
+  // dsymutil basic tests MMI is null.
+  unsigned UnitSize;
+  if (MMI != nullptr)
+    UnitSize = getDataLayout().inBytes(32);
+  else
+    // Assume 8bit byte
+    UnitSize = 4;
+  OutStreamer->EmitIntValue(Value, UnitSize);
 }
 
 /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
@@ -1930,13 +1948,34 @@ static int isRepeatedByteSequence(const Value *V, const DataLayout &DL) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     uint64_t Size = DL.getTypeAllocSizeInBits(V->getType());
     assert(Size % 8 == 0);
+    unsigned AddrUnitSize = DL.getBitsPerByte();
 
+    if (AddrUnitSize == 8) {
     // Extend the element to take zero padding into account.
     APInt Value = CI->getValue().zextOrSelf(Size);
     if (!Value.isSplat(8))
       return -1;
-
     return Value.zextOrTrunc(8).getZExtValue();
+    } else if (AddrUnitSize == 16) {
+      uint64_t Value = CI->getZExtValue();
+      typedef uint16_t AddrUnit;
+      uint16_t Byte = static_cast<AddrUnit>(Value);
+      for (unsigned i = 1; i < Size; ++i) {
+        Value >>= AddrUnitSize;
+        if (static_cast<AddrUnit>(Value) != Byte) return -1;
+      }
+      // XXX: the value returned by this function is passed on to emitFill, in a
+      // uint8_t parameter, so repeated values where the high 8 bits are
+      // non-zero cannot currently be handled
+      if ((Byte & 0xff00u) != 0)
+        return -1;
+
+      return Byte;
+    } else {
+      // Extend with handling of different addressunit sizes if needed.
+      // For now, just pretend like there is no repeated sequence.
+      return -1;
+    }
   }
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(V)) {
     // Make sure all array elements are sequences of the same repeated
@@ -1978,7 +2017,7 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
     return AP.OutStreamer->EmitBytes(CDS->getAsString());
 
   // Otherwise, emit the values in successive locations.
-  unsigned ElementByteSize = CDS->getElementByteSize();
+  uint64_t ElementByteSize = DL.getTypeAllocSize(CDS->getElementType());
   if (isa<IntegerType>(CDS->getElementType())) {
     for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
       if (AP.isVerbose())
@@ -2078,7 +2117,8 @@ static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP) {
   // Now iterate through the APInt chunks, emitting them in endian-correct
   // order, possibly with a smaller chunk at beginning/end (e.g. for x87 80-bit
   // floats).
-  unsigned NumBytes = API.getBitWidth() / 8;
+  const DataLayout &DL = AP.getDataLayout();
+  unsigned NumBytes = API.getBitWidth() / DL.getBitsPerByte();
   unsigned TrailingBytes = NumBytes % sizeof(uint64_t);
   const uint64_t *p = API.getRawData();
 
@@ -2102,7 +2142,6 @@ static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP) {
   }
 
   // Emit the tail padding for the long double.
-  const DataLayout &DL = AP.getDataLayout();
   AP.OutStreamer->EmitZeros(DL.getTypeAllocSize(CFP->getType()) -
                             DL.getTypeStoreSize(CFP->getType()));
 }
@@ -2147,7 +2186,7 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
   const uint64_t *RawData = Realigned.getRawData();
   for (unsigned i = 0, e = BitWidth / 64; i != e; ++i) {
     uint64_t Val = DL.isBigEndian() ? RawData[e - i - 1] : RawData[i];
-    AP.OutStreamer->EmitIntValue(Val, 8);
+    AP.OutStreamer->EmitIntValue(Val, 64 / DL.getBitsPerByte());
   }
 
   if (ExtraBitsSize) {
@@ -2277,11 +2316,14 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     case 2:
     case 4:
     case 8:
+      if (Size < 8 || DL.getBitsPerByte() == 8) {
       if (AP.isVerbose())
         AP.OutStreamer->GetCommentOS() << format("0x%" PRIx64 "\n",
                                                  CI->getZExtValue());
       AP.OutStreamer->EmitIntValue(CI->getZExtValue(), Size);
       return;
+      }
+      // Intended fallthrough
     default:
       emitGlobalConstantLargeInt(CI, AP);
       return;

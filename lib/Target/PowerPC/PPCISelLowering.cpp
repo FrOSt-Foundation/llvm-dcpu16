@@ -8950,9 +8950,9 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // identifier (R13) is not affected.
 
   // thisMBB:
-  const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  const int64_t TOCOffset   = 3 * PVT.getStoreSize();
-  const int64_t BPOffset    = 4 * PVT.getStoreSize();
+  const int64_t LabelOffset = 1 * PVT.getStoreSize(8);
+  const int64_t TOCOffset   = 3 * PVT.getStoreSize(8);
+  const int64_t BPOffset    = 4 * PVT.getStoreSize(8);
 
   // Prepare IP either in reg.
   const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
@@ -9062,10 +9062,10 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   MachineInstrBuilder MIB;
 
-  const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  const int64_t SPOffset    = 2 * PVT.getStoreSize();
-  const int64_t TOCOffset   = 3 * PVT.getStoreSize();
-  const int64_t BPOffset    = 4 * PVT.getStoreSize();
+  const int64_t LabelOffset = 1 * PVT.getStoreSize(8);
+  const int64_t SPOffset    = 2 * PVT.getStoreSize(8);
+  const int64_t TOCOffset   = 3 * PVT.getStoreSize(8);
+  const int64_t BPOffset    = 4 * PVT.getStoreSize(8);
 
   unsigned BufReg = MI.getOperand(0).getReg();
 

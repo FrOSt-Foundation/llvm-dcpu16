@@ -184,6 +184,24 @@ private:
   // Free all internal data structures.
   void clear();
 
+  /// Return the largest pointer size for known address spaces.
+  unsigned getMaxPointerSize() const {
+    unsigned MaxPtrSize = 0;
+    for (PointersTy::const_iterator I = Pointers.begin(), E = Pointers.end();
+         I != E; ++I) {
+      MaxPtrSize = std::max(MaxPtrSize, I->TypeByteWidth);
+    }
+
+    return (MaxPtrSize == 0) ? 64 : MaxPtrSize;
+  }
+
+  /// Convert number of bits into number of octets.
+  uint64_t inOctets(uint64_t Bits) const {
+    assert((Bits % 8 == 0) &&
+           "number of bits must be an octet width multiple");
+    return (Bits + 8 - 1) / 8;
+  }
+
 public:
   /// Constructs a DataLayout from a specification string. See reset().
   explicit DataLayout(StringRef LayoutDescription) : LayoutMap(nullptr) {
@@ -235,6 +253,9 @@ public:
       report_fatal_error("number of bits must be a byte width multiple");
     return (Bits + BitsPerByte - 1) / BitsPerByte;
   }
+
+  // FIXME: remove?
+  unsigned getBitsPerByte() const { return BitsPerByte; }
 
   /// \brief Returns the string representation of the DataLayout.
   ///
@@ -357,6 +378,12 @@ public:
   bool isNonIntegralPointerType(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty);
     return PTy && isNonIntegralPointerType(PTy);
+  }
+
+  /// Return the largest pointer size for known address spaces. ('address_space'
+  /// in DWARF.)
+  unsigned getMaxPointerSizeInOctets() const {
+    return inOctets(inBits(getMaxPointerSize()));
   }
 
   /// Layout pointer size, in bits

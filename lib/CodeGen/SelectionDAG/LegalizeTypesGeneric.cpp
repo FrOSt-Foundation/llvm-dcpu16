@@ -175,7 +175,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Lo = DAG.getLoad(NOutVT, dl, Store, StackPtr, PtrInfo);
 
   // Increment the pointer to the other half.
-  unsigned IncrementSize = NOutVT.getSizeInBits() / 8;
+  unsigned IncrementSize = NOutVT.getSize();
   StackPtr = DAG.getNode(ISD::ADD, dl, StackPtr.getValueType(), StackPtr,
                          DAG.getConstant(IncrementSize, dl,
                                          StackPtr.getValueType()));
@@ -268,7 +268,7 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
                    LD->getMemOperand()->getFlags(), AAInfo);
 
   // Increment the pointer to the other half.
-  unsigned IncrementSize = NVT.getSizeInBits() / 8;
+  unsigned IncrementSize = NVT.getSize();
   Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                     DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
   Hi = DAG.getLoad(NVT, dl, Chain, Ptr,
@@ -475,7 +475,7 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   AAMDNodes AAInfo = St->getAAInfo();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
-  unsigned IncrementSize = NVT.getSizeInBits() / 8;
+  unsigned IncrementSize = NVT.getSize();
 
   SDValue Lo, Hi;
   GetExpandedOp(St->getValue(), Lo, Hi);

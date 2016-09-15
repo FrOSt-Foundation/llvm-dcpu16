@@ -842,11 +842,12 @@ static int AnalyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   // anything to the load.  In this case, they really don't alias at all, AA
   // must have gotten confused.
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy);
+  unsigned BitsPerByte = DL.getBitsPerByte();
 
-  if ((WriteSizeInBits & 7) | (LoadSize & 7))
+  if ((WriteSizeInBits & (BitsPerByte-1)) | (LoadSize & (BitsPerByte-1)))
     return -1;
-  uint64_t StoreSize = WriteSizeInBits / 8;  // Convert to bytes.
-  LoadSize /= 8;
+  uint64_t StoreSize = WriteSizeInBits / BitsPerByte;  // Convert to bytes.
+  LoadSize /= BitsPerByte;
 
 
   bool isAAFailure = false;
@@ -917,7 +918,8 @@ static int AnalyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
   assert(DepLI->isSimple() && "Cannot widen volatile/atomic load!");
   assert(DepLI->getType()->isIntegerTy() && "Can't widen non-integer load");
 
-  return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, Size*8, DL);
+  return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr,
+                                        Size*DL.getBitsPerByte(), DL);
 }
 
 
@@ -925,10 +927,12 @@ static int AnalyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
 static int AnalyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
                                             MemIntrinsic *MI,
                                             const DataLayout &DL) {
+  unsigned BitsPerByte = DL.getBitsPerByte();
+
   // If the mem operation is a non-constant size, we can't handle it.
   ConstantInt *SizeCst = dyn_cast<ConstantInt>(MI->getLength());
   if (!SizeCst) return -1;
-  uint64_t MemSizeInBits = SizeCst->getZExtValue()*8;
+  uint64_t MemSizeInBits = SizeCst->getZExtValue()*BitsPerByte;
 
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
@@ -978,9 +982,12 @@ static Value *GetStoreValueForLoad(Value *SrcVal, unsigned Offset,
                                    Type *LoadTy,
                                    Instruction *InsertPt, const DataLayout &DL){
   LLVMContext &Ctx = SrcVal->getType()->getContext();
+  unsigned BitsPerByte = DL.getBitsPerByte();
 
-  uint64_t StoreSize = (DL.getTypeSizeInBits(SrcVal->getType()) + 7) / 8;
-  uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy) + 7) / 8;
+  uint64_t StoreSize = 
+    (DL.getTypeSizeInBits(SrcVal->getType()) + (BitsPerByte-1)) / BitsPerByte;
+  uint64_t LoadSize = 
+    (DL.getTypeSizeInBits(LoadTy) + (BitsPerByte-1)) / BitsPerByte;
 
   IRBuilder<> Builder(InsertPt);
 
@@ -990,20 +997,22 @@ static Value *GetStoreValueForLoad(Value *SrcVal, unsigned Offset,
     SrcVal = Builder.CreatePtrToInt(SrcVal,
         DL.getIntPtrType(SrcVal->getType()));
   if (!SrcVal->getType()->isIntegerTy())
-    SrcVal = Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize*8));
+    SrcVal = Builder.CreateBitCast(SrcVal, 
+                                   IntegerType::get(Ctx, StoreSize*BitsPerByte));
 
   // Shift the bits to the least significant depending on endianness.
   unsigned ShiftAmt;
   if (DL.isLittleEndian())
-    ShiftAmt = Offset*8;
+    ShiftAmt = Offset*BitsPerByte;
   else
-    ShiftAmt = (StoreSize-LoadSize-Offset)*8;
+    ShiftAmt = (StoreSize-LoadSize-Offset)*BitsPerByte;
 
   if (ShiftAmt)
     SrcVal = Builder.CreateLShr(SrcVal, ShiftAmt);
 
   if (LoadSize != StoreSize)
-    SrcVal = Builder.CreateTrunc(SrcVal, IntegerType::get(Ctx, LoadSize*8));
+    SrcVal = Builder.CreateTrunc(SrcVal,
+                                 IntegerType::get(Ctx, LoadSize*BitsPerByte));
 
   return CoerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
 }
@@ -1031,13 +1040,14 @@ static Value *GetLoadValueForLoad(LoadInst *SrcVal, unsigned Offset,
       NewLoadSize = NextPowerOf2(NewLoadSize);
 
     Value *PtrVal = SrcVal->getPointerOperand();
+    unsigned BitsPerByte = DL.getBitsPerByte();
 
     // Insert the new load after the old load.  This ensures that subsequent
     // memdep queries will find the new load.  We can't easily remove the old
     // load completely because it is already in the value numbering table.
     IRBuilder<> Builder(SrcVal->getParent(), ++BasicBlock::iterator(SrcVal));
     Type *DestPTy =
-      IntegerType::get(LoadTy->getContext(), NewLoadSize*8);
+      IntegerType::get(LoadTy->getContext(), NewLoadSize*BitsPerByte);
     DestPTy = PointerType::get(DestPTy,
                                PtrVal->getType()->getPointerAddressSpace());
     Builder.SetCurrentDebugLocation(SrcVal->getDebugLoc());
@@ -1053,7 +1063,7 @@ static Value *GetLoadValueForLoad(LoadInst *SrcVal, unsigned Offset,
     // system, we need to shift down to get the relevant bits.
     Value *RV = NewLoad;
     if (DL.isBigEndian())
-      RV = Builder.CreateLShr(RV, (NewLoadSize - SrcValStoreSize) * 8);
+      RV = Builder.CreateLShr(RV, (NewLoadSize - SrcValStoreSize) * BitsPerByte);
     RV = Builder.CreateTrunc(RV, SrcVal->getType());
     SrcVal->replaceAllUsesWith(RV);
 
@@ -1075,8 +1085,9 @@ static Value *GetLoadValueForLoad(LoadInst *SrcVal, unsigned Offset,
 static Value *GetMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                      Type *LoadTy, Instruction *InsertPt,
                                      const DataLayout &DL){
+  unsigned BitsPerByte = DL.getBitsPerByte();
   LLVMContext &Ctx = LoadTy->getContext();
-  uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy)/8;
+  uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy)/BitsPerByte;
 
   IRBuilder<> Builder(InsertPt);
 
@@ -1087,22 +1098,22 @@ static Value *GetMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
     // independently of what the offset is.
     Value *Val = MSI->getValue();
     if (LoadSize != 1)
-      Val = Builder.CreateZExt(Val, IntegerType::get(Ctx, LoadSize*8));
-
+      Val = Builder.CreateZExt(Val, IntegerType::get(Ctx, LoadSize*
+                                                     BitsPerByte));
     Value *OneElt = Val;
 
     // Splat the value out to the right number of bits.
     for (unsigned NumBytesSet = 1; NumBytesSet != LoadSize; ) {
       // If we can double the number of bytes set, do it.
       if (NumBytesSet*2 <= LoadSize) {
-        Value *ShVal = Builder.CreateShl(Val, NumBytesSet*8);
+        Value *ShVal = Builder.CreateShl(Val, NumBytesSet*BitsPerByte);
         Val = Builder.CreateOr(Val, ShVal);
         NumBytesSet <<= 1;
         continue;
       }
 
       // Otherwise insert one byte at a time.
-      Value *ShVal = Builder.CreateShl(Val, 1*8);
+      Value *ShVal = Builder.CreateShl(Val, 1*BitsPerByte);
       Val = Builder.CreateOr(OneElt, ShVal);
       ++NumBytesSet;
     }

@@ -4357,8 +4357,9 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
   assert(!Value.isUndef());
 
   unsigned NumBits = VT.getScalarSizeInBits();
+  unsigned BitsPerByte = EVT::getBitsPerByte();
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Value)) {
-    assert(C->getAPIntValue().getBitWidth() == 8);
+    assert(C->getAPIntValue().getBitWidth() == BitsPerByte);
     APInt Val = APInt::getSplat(NumBits, C->getAPIntValue());
     if (VT.isInteger())
       return DAG.getConstant(Val, dl, VT);
@@ -4366,16 +4367,16 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
                              VT);
   }
 
-  assert(Value.getValueType() == MVT::i8 && "memset with non-byte fill value?");
+//  assert(Value.getValueType() == MVT::i8 && "memset with non-byte fill value?");
   EVT IntVT = VT.getScalarType();
   if (!IntVT.isInteger())
     IntVT = EVT::getIntegerVT(*DAG.getContext(), IntVT.getSizeInBits());
 
   Value = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, Value);
-  if (NumBits > 8) {
+  if (NumBits > BitsPerByte) {
     // Use a multiplication with 0x010101... to extend the input to the
     // required length.
-    APInt Magic = APInt::getSplat(NumBits, APInt(8, 0x01));
+    APInt Magic = APInt::getSplat(NumBits, APInt(BitsPerByte, 0x01));
     Value = DAG.getNode(ISD::MUL, dl, IntVT, Value,
                         DAG.getConstant(Magic, dl, IntVT));
   }
@@ -4412,16 +4413,17 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
 
   assert(!VT.isVector() && "Can't handle vector type here!");
   unsigned NumVTBits = VT.getSizeInBits();
-  unsigned NumVTBytes = NumVTBits / 8;
+  unsigned BitsPerByte = EVT::getBitsPerByte();
+  unsigned NumVTBytes = NumVTBits / BitsPerByte;
   unsigned NumBytes = std::min(NumVTBytes, unsigned(Str.size()));
 
   APInt Val(NumVTBits, 0);
   if (DAG.getDataLayout().isLittleEndian()) {
     for (unsigned i = 0; i != NumBytes; ++i)
-      Val |= (uint64_t)(unsigned char)Str[i] << i*8;
+      Val |= (uint64_t)(unsigned char)Str[i] << i*BitsPerByte;
   } else {
     for (unsigned i = 0; i != NumBytes; ++i)
-      Val |= (uint64_t)(unsigned char)Str[i] << (NumVTBytes-i-1)*8;
+      Val |= (uint64_t)(unsigned char)Str[i] << (NumVTBytes-i-1)*BitsPerByte;
   }
 
   // If the "cost" of materializing the integer immediate is less than the cost
@@ -4507,9 +4509,11 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
       VT = LVT;
   }
 
+
+  unsigned BitsPerByte = EVT::getBitsPerByte();
   unsigned NumMemOps = 0;
   while (Size != 0) {
-    unsigned VTSize = VT.getSizeInBits() / 8;
+    unsigned VTSize = VT.getSizeInBits() / BitsPerByte;
     while (VTSize > Size) {
       // For now, only use non-vector load / store's for the left-over pieces.
       EVT NewVT = VT;
@@ -4537,7 +4541,7 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
             break;
         } while (!TLI.isSafeMemOpType(NewVT.getSimpleVT()));
       }
-      NewVTSize = NewVT.getSizeInBits() / 8;
+      NewVTSize = NewVT.getSizeInBits() / BitsPerByte;
 
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
@@ -4545,7 +4549,7 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
       // cost model for unaligned load / store.
       bool Fast;
       if (NumMemOps && AllowOverlap &&
-          VTSize >= 8 && NewVTSize < Size &&
+          VTSize >= BitsPerByte && NewVTSize < Size &&
           TLI.allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign, &Fast) && Fast)
         VTSize = Size;
       else {
@@ -4639,7 +4643,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   uint64_t SrcOff = 0, DstOff = 0;
   for (unsigned i = 0; i != NumMemOps; ++i) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / 8;
+    unsigned VTSize = VT.getSize();
     SDValue Value, Store;
 
     if (VTSize > Size) {
@@ -4744,7 +4748,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned NumMemOps = MemOps.size();
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / 8;
+    unsigned VTSize = VT.getSize();
     SDValue Value;
 
     Value =
@@ -4758,7 +4762,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   OutChains.clear();
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / 8;
+    unsigned VTSize = VT.getSize();
     SDValue Store;
 
     Store = DAG.getStore(Chain, dl, LoadValues[i],
@@ -4865,7 +4869,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
         DstPtrInfo.getWithOffset(DstOff), Align,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone);
     OutChains.push_back(Store);
-    DstOff += VT.getSizeInBits() / 8;
+    DstOff += VT.getSize();
     Size -= VTSize;
   }
 
@@ -7199,7 +7203,7 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
   if (LD->getChain() != Base->getChain())
     return false;
   EVT VT = LD->getValueType(0);
-  if (VT.getSizeInBits() / 8 != Bytes)
+  if (VT.getSize() != Bytes)
     return false;
 
   SDValue Loc = LD->getOperand(1);
@@ -7391,7 +7395,7 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue,
   // size that splats the vector.
 
   HasAnyUndefs = (SplatUndef != 0);
-  while (sz > 8) {
+  while (sz > EVT::getBitsPerByte()) {
 
     unsigned HalfSize = sz / 2;
     APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);

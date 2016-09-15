@@ -131,7 +131,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   uint64_t Size = MemOpLength->getLimitedValue();
   assert(Size && "0-sized memory transferring should be removed already.");
 
-  if (Size > 8 || (Size&(Size-1)))
+  unsigned BitsPerByte = DL.getBitsPerByte();
+  if (Size*BitsPerByte > 64 || (Size&(Size-1)))
     return nullptr;  // If not 1/2/4/8 bytes, exit.
 
   // Use an integer load+store unless we can find something better.
@@ -140,7 +141,8 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   unsigned DstAddrSp =
     cast<PointerType>(MI->getArgOperand(0)->getType())->getAddressSpace();
 
-  IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
+  IntegerType* IntType =
+    IntegerType::get(MI->getContext(), Size * BitsPerByte);
   Type *NewSrcPtrTy = PointerType::get(IntType, SrcAddrSp);
   Type *NewDstPtrTy = PointerType::get(IntType, DstAddrSp);
 

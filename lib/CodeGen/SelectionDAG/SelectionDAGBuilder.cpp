@@ -8105,7 +8105,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       unsigned NumRegs = TLI->getNumRegisters(*CurDAG->getContext(), VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
         ISD::InputArg MyFlags(Flags, RegisterVT, VT, isArgValueUsed,
-                              Idx-1, PartBase+i*RegisterVT.getStoreSize());
+                              Idx-1, PartBase+i*RegisterVT.getStoreSize(EVT::getBitsPerByte()));
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1

@@ -56,6 +56,19 @@ Value *IRBuilderBase::getCastedInt8PtrValue(Value *Ptr) {
   return BCI;
 }
 
+Value *IRBuilderBase::getCastedIntByteSizePtrValue(Value *Ptr) {
+  PointerType *PT = cast<PointerType>(Ptr->getType());
+  if (PT->getElementType()->isIntegerTy(EVT::getBitsPerByte()))
+    return Ptr;
+
+  // Otherwise, we need to insert a bitcast.
+  PT = getIntByteSizePtrTy(PT->getAddressSpace());
+  BitCastInst *BCI = new BitCastInst(Ptr, PT, "");
+  BB->getInstList().insert(InsertPt, BCI);
+  SetInstDebugLocation(BCI);
+  return BCI;
+}
+
 static CallInst *createCallHelper(Value *Callee, ArrayRef<Value *> Ops,
                                   IRBuilderBase *Builder,
                                   const Twine& Name="") {
@@ -82,7 +95,7 @@ CallInst *IRBuilderBase::
 CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
              bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
              MDNode *NoAliasTag) {
-  Ptr = getCastedInt8PtrValue(Ptr);
+  Ptr = getCastedIntByteSizePtrValue(Ptr);
   Value *Ops[] = { Ptr, Val, Size, getInt32(Align), getInt1(isVolatile) };
   Type *Tys[] = { Ptr->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
@@ -107,8 +120,8 @@ CallInst *IRBuilderBase::
 CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
              bool isVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
              MDNode *ScopeTag, MDNode *NoAliasTag) {
-  Dst = getCastedInt8PtrValue(Dst);
-  Src = getCastedInt8PtrValue(Src);
+  Dst = getCastedIntByteSizePtrValue(Dst);
+  Src = getCastedIntByteSizePtrValue(Src);
 
   Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
@@ -138,8 +151,8 @@ CallInst *IRBuilderBase::
 CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
               bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
               MDNode *NoAliasTag) {
-  Dst = getCastedInt8PtrValue(Dst);
-  Src = getCastedInt8PtrValue(Src);
+  Dst = getCastedIntByteSizePtrValue(Dst);
+  Src = getCastedIntByteSizePtrValue(Src);
   
   Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };

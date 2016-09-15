@@ -25475,7 +25475,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // thisMBB:
   unsigned PtrStoreOpc = 0;
   unsigned LabelReg = 0;
-  const int64_t LabelOffset = 1 * PVT.getStoreSize();
+  const int64_t LabelOffset = 1 * PVT.getStoreSize(8);
   bool UseImmLabel = (MF->getTarget().getCodeModel() == CodeModel::Small) &&
                      !isPositionIndependent();
 
@@ -25582,8 +25582,8 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   MachineInstrBuilder MIB;
 
-  const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  const int64_t SPOffset = 2 * PVT.getStoreSize();
+  const int64_t LabelOffset = 1 * PVT.getStoreSize(8);
+  const int64_t SPOffset = 2 * PVT.getStoreSize(8);
 
   unsigned PtrLoadOpc = (PVT == MVT::i64) ? X86::MOV64rm : X86::MOV32rm;
   unsigned IJmpOpc = (PVT == MVT::i64) ? X86::JMP64r : X86::JMP32r;

@@ -1376,6 +1376,8 @@ void DwarfUnit::constructContainingTypeDIEs() {
 void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   DIE &MemberDie = createAndAddDIE(DT->getTag(), Buffer);
   StringRef Name = DT->getName();
+  auto BitsPerByte = Asm->getDataLayout().getBitsPerByte();
+
   if (!Name.empty())
     addString(MemberDie, dwarf::DW_AT_name, Name);
 
@@ -1407,9 +1409,8 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
 
     bool IsBitfield = FieldSize && Size != FieldSize;
     if (IsBitfield) {
-      // Handle bitfield, assume bytes are 8 bits.
       if (DD->useDWARF2Bitfields())
-        addUInt(MemberDie, dwarf::DW_AT_byte_size, None, FieldSize/8);
+        addUInt(MemberDie, dwarf::DW_AT_byte_size, None, FieldSize/BitsPerByte);
       addUInt(MemberDie, dwarf::DW_AT_bit_size, None, Size);
 
       uint64_t Offset = DT->getOffsetInBits();
@@ -1421,7 +1422,7 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       // The bits from the start of the storage unit to the start of the field.
       uint64_t StartBitOffset = Offset - (Offset & AlignMask);
       // The byte offset of the field's aligned storage unit inside the struct.
-      OffsetInBytes = (Offset - StartBitOffset) / 8;
+      OffsetInBytes = (Offset - StartBitOffset) / BitsPerByte;
 
       if (DD->useDWARF2Bitfields()) {
         uint64_t HiMark = (Offset + FieldSize) & AlignMask;
@@ -1439,7 +1440,7 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       }
     } else {
       // This is not a bitfield.
-      OffsetInBytes = DT->getOffsetInBits() / 8;
+      OffsetInBytes = DT->getOffsetInBits() / BitsPerByte;
       if (AlignInBytes)
         addUInt(MemberDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
                 AlignInBytes);

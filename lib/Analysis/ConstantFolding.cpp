@@ -329,6 +329,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
                         unsigned BytesLeft, const DataLayout &DL) {
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
+  unsigned BitsPerByte = DL.getBitsPerByte();
 
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
@@ -337,11 +338,11 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (CI->getBitWidth() > 64 ||
-        (CI->getBitWidth() & 7) != 0)
+        (CI->getBitWidth() & (BitsPerByte-1)) != 0)
       return false;
 
     uint64_t Val = CI->getZExtValue();
-    unsigned IntBytes = unsigned(CI->getBitWidth()/8);
+    unsigned IntBytes = unsigned(CI->getBitWidth()/BitsPerByte);
 
     for (unsigned i = 0; i != BytesLeft && ByteOffset != IntBytes; ++i) {
       int n = ByteOffset;
@@ -617,11 +618,13 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   // directly if string length is small enough.
   StringRef Str;
   if (getConstantStringInfo(CE, Str) && !Str.empty()) {
+    unsigned BitsPerByte = DL.getBitsPerByte();
     size_t StrLen = Str.size();
     unsigned NumBits = Ty->getPrimitiveSizeInBits();
     // Replace load with immediate integer if the result is an integer or fp
     // value.
-    if ((NumBits >> 3) == StrLen + 1 && (NumBits & 7) == 0 &&
+    if ((NumBits / BitsPerByte) ==
+        StrLen + 1 && (NumBits & (BitsPerByte-1)) == 0 &&
         (isa<IntegerType>(Ty) || Ty->isFloatingPointTy())) {
       APInt StrVal(NumBits, 0);
       APInt SingleChar(NumBits, 0);
@@ -807,6 +810,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     return nullptr;
 
   Type *IntPtrTy = DL.getIntPtrType(Ptr->getType());
+  unsigned BitsPerByte = DL.getBitsPerByte();
 
   // If this is a constant expr gep that is effectively computing an
   // "offsetof", fold it into 'cast int Size to T*' instead of 'gep 0, 0, 12'
@@ -815,7 +819,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
       // If this is "gep i8* Ptr, (sub 0, V)", fold this as:
       // "inttoptr (sub (ptrtoint Ptr), V)"
-      if (Ops.size() == 2 && ResElemTy->isIntegerTy(8)) {
+      if (Ops.size() == 2 && ResElemTy->isIntegerTy(BitsPerByte)) {
         auto *CE = dyn_cast<ConstantExpr>(Ops[1]);
         assert((!CE || CE->getType() == IntPtrTy) &&
                "CastGEPIndices didn't canonicalize index types!");

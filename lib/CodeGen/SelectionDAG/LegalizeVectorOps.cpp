@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetLowering.h"
 using namespace llvm;
 

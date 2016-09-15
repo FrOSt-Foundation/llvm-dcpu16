@@ -806,7 +806,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
         for (unsigned j = 0; j != NumElements; ++j) {
           Splits.push_back(NewArg);
-          NewArg.PartOffset += NewArg.VT.getStoreSize();
+        NewArg.PartOffset += NewArg.VT.getStoreSize(8);
         }
       } else {
         Splits.push_back(Arg);

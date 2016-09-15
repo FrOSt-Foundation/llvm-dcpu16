@@ -38,6 +38,7 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -2682,19 +2683,22 @@ bool llvm::SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI) {
   return cannotBeOrderedLessThanZeroImpl(V, TLI, true, 0);
 }
 
+/// XXXcsa name kept, i.e. byte equal least byte size
 /// If the specified value can be set by repeating the same byte in memory,
-/// return the i8 value that it is represented with.  This is
-/// true for all i8 values obviously, but is also true for i32 0, i32 -1,
+/// return the byte value that it is represented with.  This is
+/// true for all byte values obviously, but is also true for i32 0, i32 -1,
 /// i16 0xF0F0, double 0.0 etc.  If the value can't be handled with a repeated
-/// byte store (e.g. i16 0x1234), return null.
+/// byte store (e.g. i16 0x1234 if a byte is byte), return null.
 Value *llvm::isBytewiseValue(Value *V) {
-  // All byte-wide stores are splatable, even of arbitrary variables.
-  if (V->getType()->isIntegerTy(8)) return V;
+  unsigned numBits = EVT::getBitsPerByte();
+  // All least byte-size stores are splatable, even of arbitrary
+  // variables.
+  if (V->getType()->isIntegerTy(numBits)) return V;
 
   // Handle 'null' ConstantArrayZero etc.
   if (Constant *C = dyn_cast<Constant>(V))
     if (C->isNullValue())
-      return Constant::getNullValue(Type::getInt8Ty(V->getContext()));
+      return Constant::getNullValue(Type::getIntNTy(V->getContext(), numBits));
 
   // Constant float and double values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.
@@ -2706,14 +2710,14 @@ Value *llvm::isBytewiseValue(Value *V) {
     // Don't handle long double formats, which have strange constraints.
   }
 
-  // We can handle constant integers that are multiple of 8 bits.
+  // We can handle constant integers that are multiple of byte-size bits.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->getBitWidth() % 8 == 0) {
-      assert(CI->getBitWidth() > 8 && "8 bits should be handled above!");
+    if (CI->getBitWidth() % numBits == 0) {
+      assert(CI->getBitWidth() > numBits && "byte-size bits should be handled above!");
 
-      if (!CI->getValue().isSplat(8))
+      if (!CI->getValue().isSplat(numBits))
         return nullptr;
-      return ConstantInt::get(V->getContext(), CI->getValue().trunc(8));
+      return ConstantInt::get(V->getContext(), CI->getValue().trunc(numBits));
     }
   }
 

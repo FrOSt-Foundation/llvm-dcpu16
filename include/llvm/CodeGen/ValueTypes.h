@@ -32,6 +32,7 @@ namespace llvm {
   private:
     MVT V;
     Type *LLVMTy;
+    static unsigned BitsPerByte;
 
   public:
     constexpr EVT() : V(MVT::INVALID_SIMPLE_VALUE_TYPE), LLVMTy(nullptr) {}
@@ -47,6 +48,13 @@ namespace llvm {
       if (V.SimpleTy < 0)
         return LLVMTy != VT.LLVMTy;
       return false;
+    }
+
+    static void setBitsPerByte(unsigned size) {
+      BitsPerByte = size;
+    }
+    static unsigned getBitsPerByte() {
+      return BitsPerByte;
     }
 
     /// getFloatingPointVT - Returns the EVT that represents a floating point
@@ -179,15 +187,15 @@ namespace llvm {
       return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny || V==MVT::iPTRAny);
     }
 
-    /// isByteSized - Return true if the bit size is a multiple of 8.
+    /// isByteSized - Return true if the bit size is a multiple of BitsPerByte.
     bool isByteSized() const {
-      return (getSizeInBits() & 7) == 0;
+      return (getSizeInBits() & (BitsPerByte - 1)) == 0;
     }
 
-    /// isRound - Return true if the size is a power-of-two number of bytes.
+    /// isRound - Return true if the size is a power-of-two number of BitsPerByte.
     bool isRound() const {
       unsigned BitSize = getSizeInBits();
-      return BitSize >= 8 && !(BitSize & (BitSize - 1));
+      return BitSize >= BitsPerByte && !(BitSize & (BitSize - 1));
     }
 
     /// bitsEq - Return true if this has the same number of bits as VT.
@@ -259,6 +267,11 @@ namespace llvm {
       return getExtendedSizeInBits();
     }
 
+    /// getSize - Return the size of the specified value type in bytes.
+    unsigned getSize() const {
+      return getSizeInBits() / BitsPerByte;
+    }
+
     unsigned getScalarSizeInBits() const {
       return getScalarType().getSizeInBits();
     }
@@ -266,13 +279,13 @@ namespace llvm {
     /// getStoreSize - Return the number of bytes overwritten by a store
     /// of the specified value type.
     unsigned getStoreSize() const {
-      return (getSizeInBits() + 7) / 8;
+      return (getSizeInBits() + (BitsPerByte-1)) / BitsPerByte;
     }
 
     /// getStoreSizeInBits - Return the number of bits overwritten by a store
     /// of the specified value type.
     unsigned getStoreSizeInBits() const {
-      return getStoreSize() * 8;
+      return getStoreSize() * BitsPerByte;
     }
 
     /// getRoundIntegerType - Rounds the bit-width of the given integer EVT up
@@ -281,8 +294,8 @@ namespace llvm {
     EVT getRoundIntegerType(LLVMContext &Context) const {
       assert(isInteger() && !isVector() && "Invalid integer type!");
       unsigned BitWidth = getSizeInBits();
-      if (BitWidth <= 8)
-        return EVT(MVT::i8);
+      if (BitWidth <= BitsPerByte)
+        return EVT(MVT::getIntegerVT(BitsPerByte));
       return getIntegerVT(Context, 1 << Log2_32_Ceil(BitWidth));
     }
 

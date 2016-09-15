@@ -2086,7 +2086,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
     EVT NEVT = EVT::getIntegerVT(*DAG.getContext(), ExcessBits);
 
     // Increment the pointer to the other half.
-    unsigned IncrementSize = NVT.getSizeInBits()/8;
+    unsigned IncrementSize = NVT.getSize();
     Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                       DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
     Hi = DAG.getExtLoad(ExtType, dl, NVT, Ch, Ptr,
@@ -2102,8 +2102,8 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
     // the cost of some bit-fiddling.
     EVT MemVT = N->getMemoryVT();
     unsigned EBytes = MemVT.getStoreSize();
-    unsigned IncrementSize = NVT.getSizeInBits()/8;
-    unsigned ExcessBits = (EBytes - IncrementSize)*8;
+    unsigned IncrementSize = NVT.getSize();
+    unsigned ExcessBits = (EBytes - IncrementSize)*EVT::getBitsPerByte();
 
     // Load both the high bits and maybe some of the low bits.
     Hi = DAG.getExtLoad(ExtType, dl, NVT, Ch, Ptr, N->getPointerInfo(),
@@ -3057,7 +3057,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
     EVT NEVT = EVT::getIntegerVT(*DAG.getContext(), ExcessBits);
 
     // Increment the pointer to the other half.
-    unsigned IncrementSize = NVT.getSizeInBits()/8;
+    unsigned IncrementSize = NVT.getSize();
     Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                       DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
     Hi = DAG.getTruncStore(
@@ -3072,8 +3072,8 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
 
   EVT ExtVT = N->getMemoryVT();
   unsigned EBytes = ExtVT.getStoreSize();
-  unsigned IncrementSize = NVT.getSizeInBits()/8;
-  unsigned ExcessBits = (EBytes - IncrementSize)*8;
+  unsigned IncrementSize = NVT.getSize();
+  unsigned ExcessBits = (EBytes - IncrementSize)*EVT::getBitsPerByte();
   EVT HiVT = EVT::getIntegerVT(*DAG.getContext(),
                                ExtVT.getSizeInBits() - ExcessBits);
 

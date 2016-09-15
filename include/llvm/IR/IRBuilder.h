@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -382,6 +383,12 @@ public:
   }
 
   /// \brief Fetch the type representing a pointer to an 8-bit integer value.
+  //XXXcsa Since llvm_ptr_ty is still an i8* this must stay even on Phoenix
+  //       For a complete solution it should of course be removed but since
+  //       "a lot" of code must be changed to use a new , e.g. the below,
+  //       function before it can be removed.
+  //       Or perhaps it is just "redefined" to just do an byte
+  //       size pointer instead if an i8...
   PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
     return Type::getInt8PtrTy(Context, AddrSpace);
   }
@@ -389,6 +396,14 @@ public:
   /// \brief Fetch the type representing a pointer to an integer value.
   IntegerType *getIntPtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
     return DL.getIntPtrType(Context, AddrSpace);
+  }
+
+  // XXXcsa Ugly to introduce EVT here but TargetData must be even worse.
+  //        Perhaps the byte size should also be present in the Type class?
+  PointerType *getIntByteSizePtrTy(unsigned AddrSpace = 0) {
+    IntegerType* ByteSizedInt =
+      IntegerType::get(Context, EVT::getBitsPerByte());
+    return ByteSizedInt->getPointerTo(AddrSpace);
   }
 
   //===--------------------------------------------------------------------===//
@@ -567,6 +582,7 @@ private:
                                   const Twine &Name = "");
 
   Value *getCastedInt8PtrValue(Value *Ptr);
+  Value *getCastedIntByteSizePtrValue(Value *Ptr);
 };
 
 /// \brief This provides a uniform API for creating instructions and inserting

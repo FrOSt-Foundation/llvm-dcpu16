@@ -512,7 +512,8 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
         assert(RoundWidth < StWidth);
         unsigned ExtraWidth = StWidth - RoundWidth;
         assert(ExtraWidth < RoundWidth);
-        assert(!(RoundWidth % 8) && !(ExtraWidth % 8) &&
+        assert(!(RoundWidth % EVT::getBitsPerByte()) &&
+               !(ExtraWidth % EVT::getBitsPerByte()) &&
                "Store size not an integral number of bytes!");
         EVT RoundVT = EVT::getIntegerVT(*DAG.getContext(), RoundWidth);
         EVT ExtraVT = EVT::getIntegerVT(*DAG.getContext(), ExtraWidth);
@@ -526,7 +527,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
                                  RoundVT, Alignment, MMOFlags, AAInfo);
 
           // Store the remaining ExtraWidth bits.
-          IncrementSize = RoundWidth / 8;
+          IncrementSize = RoundWidth / EVT::getBitsPerByte();
           Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                             DAG.getConstant(IncrementSize, dl,
                                             Ptr.getValueType()));
@@ -550,7 +551,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
                                  RoundVT, Alignment, MMOFlags, AAInfo);
 
           // Store the remaining ExtraWidth bits.
-          IncrementSize = RoundWidth / 8;
+          IncrementSize = RoundWidth / EVT::getBitsPerByte();
           Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                             DAG.getConstant(IncrementSize, dl,
                                             Ptr.getValueType()));
@@ -715,7 +716,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     assert(RoundWidth < SrcWidth);
     unsigned ExtraWidth = SrcWidth - RoundWidth;
     assert(ExtraWidth < RoundWidth);
-    assert(!(RoundWidth % 8) && !(ExtraWidth % 8) &&
+    assert(!(RoundWidth % EVT::getBitsPerByte()) &&
+           !(ExtraWidth % EVT::getBitsPerByte()) &&
            "Load size not an integral number of bytes!");
     EVT RoundVT = EVT::getIntegerVT(*DAG.getContext(), RoundWidth);
     EVT ExtraVT = EVT::getIntegerVT(*DAG.getContext(), ExtraWidth);
@@ -731,7 +733,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                           AAInfo);
 
       // Load the remaining ExtraWidth bits.
-      IncrementSize = RoundWidth / 8;
+      IncrementSize = RoundWidth / EVT::getBitsPerByte();
       Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                          DAG.getConstant(IncrementSize, dl,
                                          Ptr.getValueType()));
@@ -762,7 +764,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                           AAInfo);
 
       // Load the remaining ExtraWidth bits.
-      IncrementSize = RoundWidth / 8;
+      IncrementSize = RoundWidth / EVT::getBitsPerByte();
       Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                          DAG.getConstant(IncrementSize, dl,
                                          Ptr.getValueType()));
@@ -1279,7 +1281,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
   // Emit a store of each element to the stack slot.
   SmallVector<SDValue, 8> Stores;
-  unsigned TypeByteSize = EltVT.getSizeInBits() / 8;
+  unsigned TypeByteSize = EltVT.getSize();
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
     // Ignore undef elements.
@@ -1366,7 +1368,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
     State.IntPointerInfo = State.FloatPointerInfo;
   } else {
     // Advance the pointer so that the loaded byte will contain the sign bit.
-    unsigned ByteOffset = (FloatVT.getSizeInBits() / 8) - 1;
+    unsigned ByteOffset = (FloatVT.getSizeInBits() / EVT::getBitsPerByte()) - 1;
     IntPtr = DAG.getNode(ISD::ADD, DL, StackPtr.getValueType(), StackPtr,
                       DAG.getConstant(ByteOffset, DL, StackPtr.getValueType()));
     State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
@@ -2644,7 +2646,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
     unsigned Len = VT.getSizeInBits();
 
-    assert(VT.isInteger() && Len <= 128 && Len % 8 == 0 &&
+    assert(VT.isInteger() && Len <= 128 && Len % DAG.getDataLayout().getBitsPerByte() == 0 &&
            "CTPOP not implemented for this type.");
 
     // This is the "best" algorithm from
@@ -2681,7 +2683,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     // v = (v * 0x01010101...) >> (Len - 8)
     Op = DAG.getNode(ISD::SRL, dl, VT,
                      DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
-                     DAG.getConstant(Len - 8, dl, ShVT));
+                     DAG.getConstant(Len - DAG.getDataLayout().getBitsPerByte(), dl, ShVT));
 
     return Op;
   }
@@ -3583,7 +3585,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Addr = DAG.getNode(ISD::ADD, dl, Index.getValueType(),
                                Index, Table);
 
-    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * 8);
+    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * DAG.getDataLayout().getBitsPerByte());
     SDValue LD = DAG.getExtLoad(
         ISD::SEXTLOAD, dl, PTy, Chain, Addr,
         MachinePointerInfo::getJumpTable(DAG.getMachineFunction()), MemVT);

@@ -7160,7 +7160,9 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ShAmt = LVTStoreBits - EVTStoreBits - ShAmt;
   }
 
-  uint64_t PtrOff = ShAmt / 8;
+  const DataLayout &TD = DAG.getDataLayout();
+
+  uint64_t PtrOff = ShAmt / TD.getBitsPerByte();
   unsigned NewAlign = MinAlign(LN0->getAlignment(), PtrOff);
   SDLoc DL(LN0);
   // The original load itself didn't wrap, so an offset within it doesn't.
@@ -7603,7 +7605,7 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
   EVT LD1VT = LD1->getValueType(0);
-  unsigned LD1Bytes = LD1VT.getSizeInBits() / 8;
+  unsigned LD1Bytes = LD1VT.getSize();
   if (ISD::isNON_EXTLoad(LD2) && LD2->hasOneUse() &&
       DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
     unsigned Align = LD1->getAlignment();
@@ -11018,6 +11020,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
 static std::pair<unsigned, unsigned>
 CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   std::pair<unsigned, unsigned> Result(0, 0);
+  unsigned BitsPerByte = EVT::getBitsPerByte();
 
   // Check for the structure we're looking for.
   if (V->getOpcode() != ISD::AND ||
@@ -11056,9 +11059,9 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   // follow the sign bit for uniformity.
   uint64_t NotMask = ~cast<ConstantSDNode>(V->getOperand(1))->getSExtValue();
   unsigned NotMaskLZ = countLeadingZeros(NotMask);
-  if (NotMaskLZ & 7) return Result;  // Must be multiple of a byte.
+  if (NotMaskLZ & (BitsPerByte-1)) return Result;  // Must be multiple of a byte.
   unsigned NotMaskTZ = countTrailingZeros(NotMask);
-  if (NotMaskTZ & 7) return Result;  // Must be multiple of a byte.
+  if (NotMaskTZ & (BitsPerByte-1)) return Result;  // Must be multiple of a byte.
   if (NotMaskLZ == 64) return Result;  // All zero mask.
 
   // See if we have a continuous run of bits.  If so, we have 0*1+0*
@@ -11069,7 +11072,7 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   if (V.getValueType() != MVT::i64 && NotMaskLZ)
     NotMaskLZ -= 64-V.getValueSizeInBits();
 
-  unsigned MaskedBytes = (V.getValueSizeInBits()-NotMaskLZ-NotMaskTZ)/8;
+  unsigned MaskedBytes = (V.getValueSizeInBits()-NotMaskLZ-NotMaskTZ)/BitsPerByte;
   switch (MaskedBytes) {
   case 1:
   case 2:
@@ -11079,10 +11082,10 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
 
   // Verify that the first bit starts at a multiple of mask so that the access
   // is aligned the same as the access width.
-  if (NotMaskTZ && NotMaskTZ/8 % MaskedBytes) return Result;
+  if (NotMaskTZ && NotMaskTZ/BitsPerByte % MaskedBytes) return Result;
 
   Result.first = MaskedBytes;
-  Result.second = NotMaskTZ/8;
+  Result.second = NotMaskTZ/BitsPerByte;
   return Result;
 }
 
@@ -11094,6 +11097,7 @@ static SDNode *
 ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
                                 SDValue IVal, StoreSDNode *St,
                                 DAGCombiner *DC) {
+  unsigned BitsPerByte = EVT::getBitsPerByte();
   unsigned NumBytes = MaskInfo.first;
   unsigned ByteShift = MaskInfo.second;
   SelectionDAG &DAG = DC->getDAG();
@@ -11101,13 +11105,14 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   // Check to see if IVal is all zeros in the part being masked in by the 'or'
   // that uses this.  If not, this is not a replacement.
   APInt Mask = ~APInt::getBitsSet(IVal.getValueSizeInBits(),
-                                  ByteShift*8, (ByteShift+NumBytes)*8);
+                                  ByteShift*BitsPerByte,
+                                  (ByteShift+NumBytes)*BitsPerByte);
   if (!DAG.MaskedValueIsZero(IVal, Mask)) return nullptr;
 
   // Check that it is legal on the target to do this.  It is legal if the new
   // VT we're shrinking to (i8/i16/i32) is legal or we're still before type
   // legalization.
-  MVT VT = MVT::getIntegerVT(NumBytes*8);
+  MVT VT = MVT::getIntegerVT(NumBytes*BitsPerByte);
   if (!DC->isTypeLegal(VT))
     return nullptr;
 
@@ -11116,7 +11121,7 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   if (ByteShift) {
     SDLoc DL(IVal);
     IVal = DAG.getNode(ISD::SRL, DL, IVal.getValueType(), IVal,
-                       DAG.getConstant(ByteShift*8, DL,
+                       DAG.getConstant(ByteShift*BitsPerByte, DL,
                                     DC->getShiftAmountTy(IVal.getValueType())));
   }
 
@@ -11227,6 +11232,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
 
     // If the lsb changed does not start at the type bitwidth boundary,
     // start at the previous one.
+    unsigned BitsPerByte = EVT::getBitsPerByte();
     if (ShAmt % NewBW)
       ShAmt = (((ShAmt + NewBW - 1) / NewBW) * NewBW) - NewBW;
     APInt Mask = APInt::getBitsSet(BitWidth, ShAmt,
@@ -11235,11 +11241,12 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
       APInt NewImm = (Imm & Mask).lshr(ShAmt).trunc(NewBW);
       if (Opc == ISD::AND)
         NewImm ^= APInt::getAllOnesValue(NewBW);
-      uint64_t PtrOff = ShAmt / 8;
+      uint64_t PtrOff = ShAmt / BitsPerByte;
       // For big endian targets, we need to adjust the offset to the pointer to
       // load the correct bytes.
       if (DAG.getDataLayout().isBigEndian())
-        PtrOff = (BitWidth + 7 - NewBW) / 8 - PtrOff;
+        PtrOff = (BitWidth + (BitsPerByte-1) - NewBW) /
+          BitsPerByte - PtrOff;
 
       unsigned NewAlign = MinAlign(LD->getAlignment(), PtrOff);
       Type *NewVTTy = NewVT.getTypeForEVT(*DAG.getContext());
@@ -11690,12 +11697,12 @@ bool DAGCombiner::MergeConsecutiveStores(
     return false;
 
   EVT MemVT = St->getMemoryVT();
-  int64_t ElementSizeBytes = MemVT.getSizeInBits() / 8;
+  int64_t ElementSizeBytes = MemVT.getSizeInBits() / EVT::getBitsPerByte();
   bool NoVectors = DAG.getMachineFunction().getFunction()->hasFnAttribute(
       Attribute::NoImplicitFloat);
 
   // This function cannot currently deal with non-byte-sized memory sizes.
-  if (ElementSizeBytes * 8 != MemVT.getSizeInBits())
+  if (ElementSizeBytes * EVT::getBitsPerByte() != MemVT.getSizeInBits())
     return false;
 
   if (!MemVT.isSimple())
@@ -12565,7 +12572,8 @@ SDValue DAGCombiner::ReplaceExtractVectorEltOfLoadWithNarrowedLoad(
   SDLoc DL(EVE);
   if (auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo)) {
     int Elt = ConstEltNo->getZExtValue();
-    unsigned PtrOff = VecEltVT.getSizeInBits() * Elt / 8;
+    unsigned BitsPerByte = EVT::getBitsPerByte();
+    unsigned PtrOff = VecEltVT.getSizeInBits() * Elt / BitsPerByte;
     Offset = DAG.getConstant(PtrOff, DL, PtrType);
     MPI = OriginalLoad->getPointerInfo().getWithOffset(PtrOff);
   } else {

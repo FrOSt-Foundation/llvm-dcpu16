@@ -1199,7 +1199,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         // "real" size, not the size of the pointer.
         ObjSize = Flags.getByValSize();
       } else {
-        ObjSize = VA.getLocVT().getStoreSizeInBits() >> 3;
+        ObjSize = VA.getLocVT().getStoreSize(8);
       }
 
       StackLocation = HEXAGON_LRFP_SIZE + VA.getLocMemOffset();

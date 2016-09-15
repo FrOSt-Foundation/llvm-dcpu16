@@ -29,6 +29,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include <algorithm>
 #include <cstdlib>
 using namespace llvm;
@@ -358,6 +359,7 @@ void DataLayout::parseSpecifier(StringRef Desc) {
       // the byte size. That is, p, i, v, f, a, s, and n. Otherwise, the default
       // value of 8 bits will be used for the calculating the alignment numbers.
       BitsPerByte = getInt(Tok);
+      EVT::setBitsPerByte(BitsPerByte);
       break;
     }
     case 'm':
