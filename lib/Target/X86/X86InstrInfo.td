@@ -65,6 +65,8 @@ def SDTX86SetCC_C : SDTypeProfile<1, 2,
 
 def SDTX86sahf : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i8>]>;
 
+def SDTX86rdrand : SDTypeProfile<2, 0, [SDTCisInt<0>, SDTCisVT<1, i32>]>;
+
 def SDTX86cas : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisInt<1>,
                                      SDTCisVT<2, i8>]>;
 def SDTX86caspair : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
@@ -112,7 +114,7 @@ def SDT_X86TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>;
 def SDT_X86MEMBARRIER : SDTypeProfile<0, 0, []>;
 
 def X86MemBarrier : SDNode<"X86ISD::MEMBARRIER", SDT_X86MEMBARRIER,
-                            [SDNPHasChain]>;
+                            [SDNPHasChain,SDNPSideEffect]>;
 def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
                         [SDNPHasChain]>;
 def X86SFence : SDNode<"X86ISD::SFENCE", SDT_X86MEMBARRIER,
@@ -136,6 +138,9 @@ def X86setcc   : SDNode<"X86ISD::SETCC",    SDTX86SetCC>;
 def X86setcc_c : SDNode<"X86ISD::SETCC_CARRY", SDTX86SetCC_C>;
 
 def X86sahf    : SDNode<"X86ISD::SAHF",     SDTX86sahf>;
+
+def X86rdrand  : SDNode<"X86ISD::RDRAND",   SDTX86rdrand,
+                        [SDNPHasChain, SDNPSideEffect]>;
 
 def X86cas : SDNode<"X86ISD::LCMPXCHG_DAG", SDTX86cas,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
@@ -210,6 +215,14 @@ def X86tlsbaseaddr : SDNode<"X86ISD::TLSBASEADDR", SDT_X86TLSBASEADDR,
 
 def X86ehret : SDNode<"X86ISD::EH_RETURN", SDT_X86EHRET,
                         [SDNPHasChain]>;
+
+def X86eh_sjlj_setjmp  : SDNode<"X86ISD::EH_SJLJ_SETJMP",
+                                SDTypeProfile<1, 1, [SDTCisInt<0>,
+                                                     SDTCisPtrTy<1>]>,
+                                [SDNPHasChain, SDNPSideEffect]>;
+def X86eh_sjlj_longjmp : SDNode<"X86ISD::EH_SJLJ_LONGJMP",
+                                SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+                                [SDNPHasChain, SDNPSideEffect]>;
 
 def X86tcret : SDNode<"X86ISD::TC_RETURN", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
@@ -287,6 +300,20 @@ def X86Mem256AsmOperand : AsmOperandClass {
   let Name = "Mem256"; let PredicateMethod = "isMem256";
 }
 
+// Gather mem operands
+def X86MemVX32Operand : AsmOperandClass {
+  let Name = "MemVX32"; let PredicateMethod = "isMemVX32";
+}
+def X86MemVY32Operand : AsmOperandClass {
+  let Name = "MemVY32"; let PredicateMethod = "isMemVY32";
+}
+def X86MemVX64Operand : AsmOperandClass {
+  let Name = "MemVX64"; let PredicateMethod = "isMemVX64";
+}
+def X86MemVY64Operand : AsmOperandClass {
+  let Name = "MemVY64"; let PredicateMethod = "isMemVY64";
+}
+
 def X86AbsMemAsmOperand : AsmOperandClass {
   let Name = "AbsMem";
   let SuperClasses = [X86MemAsmOperand];
@@ -325,12 +352,20 @@ def f128mem : X86MemOperand<"printf128mem"> {
   let ParserMatchClass = X86Mem128AsmOperand; }
 def f256mem : X86MemOperand<"printf256mem">{ 
   let ParserMatchClass = X86Mem256AsmOperand; }
-def v128mem : X86MemOperand<"printf128mem"> {
+
+// Gather mem operands
+def vx32mem : X86MemOperand<"printi32mem">{
   let MIOperandInfo = (ops ptr_rc, i8imm, VR128, i32imm, i8imm);
-  let ParserMatchClass = X86Mem128AsmOperand; }
-def v256mem : X86MemOperand<"printf256mem"> {
+  let ParserMatchClass = X86MemVX32Operand; }
+def vy32mem : X86MemOperand<"printi32mem">{
   let MIOperandInfo = (ops ptr_rc, i8imm, VR256, i32imm, i8imm);
-  let ParserMatchClass = X86Mem256AsmOperand; }
+  let ParserMatchClass = X86MemVY32Operand; }
+def vx64mem : X86MemOperand<"printi64mem">{
+  let MIOperandInfo = (ops ptr_rc, i8imm, VR128, i32imm, i8imm);
+  let ParserMatchClass = X86MemVX64Operand; }
+def vy64mem : X86MemOperand<"printi64mem">{
+  let MIOperandInfo = (ops ptr_rc, i8imm, VR256, i32imm, i8imm);
+  let ParserMatchClass = X86MemVY64Operand; }
 }
 
 // A version of i8mem for use on x86-64 that uses GR64_NOREX instead of
@@ -370,7 +405,7 @@ def i64mem_TC : Operand<i64> {
 
 let OperandType = "OPERAND_PCREL",
     ParserMatchClass = X86AbsMemAsmOperand,
-    PrintMethod = "print_pcrel_imm" in {
+    PrintMethod = "printPCRelImm" in {
 def i32imm_pcrel : Operand<i32>;
 def i16imm_pcrel : Operand<i16>;
 
@@ -391,7 +426,7 @@ def SSECC : Operand<i8> {
 }
 
 def AVXCC : Operand<i8> {
-  let PrintMethod = "printSSECC";
+  let PrintMethod = "printAVXCC";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -472,7 +507,7 @@ def i64i32imm  : Operand<i64> {
 // 64-bits but only 32 bits are significant, and those bits are treated as being
 // pc relative.
 def i64i32imm_pcrel : Operand<i64> {
-  let PrintMethod = "print_pcrel_imm";
+  let PrintMethod = "printPCRelImm";
   let ParserMatchClass = X86AbsMemAsmOperand;
   let OperandType = "OPERAND_PCREL";
 }
@@ -525,14 +560,21 @@ def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def Has3DNow     : Predicate<"Subtarget->has3DNow()">;
 def Has3DNowA    : Predicate<"Subtarget->has3DNowA()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;
+def UseSSE1      : Predicate<"Subtarget->hasSSE1() && !Subtarget->hasAVX()">;
 def HasSSE2      : Predicate<"Subtarget->hasSSE2()">;
+def UseSSE2      : Predicate<"Subtarget->hasSSE2() && !Subtarget->hasAVX()">;
 def HasSSE3      : Predicate<"Subtarget->hasSSE3()">;
+def UseSSE3      : Predicate<"Subtarget->hasSSE3() && !Subtarget->hasAVX()">;
 def HasSSSE3     : Predicate<"Subtarget->hasSSSE3()">;
+def UseSSSE3     : Predicate<"Subtarget->hasSSSE3() && !Subtarget->hasAVX()">;
 def HasSSE41     : Predicate<"Subtarget->hasSSE41()">;
+def UseSSE41     : Predicate<"Subtarget->hasSSE41() && !Subtarget->hasAVX()">;
 def HasSSE42     : Predicate<"Subtarget->hasSSE42()">;
+def UseSSE42     : Predicate<"Subtarget->hasSSE42() && !Subtarget->hasAVX()">;
 def HasSSE4A     : Predicate<"Subtarget->hasSSE4A()">;
 def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
+def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 
 def HasPOPCNT    : Predicate<"Subtarget->hasPOPCNT()">;
 def HasAES       : Predicate<"Subtarget->hasAES()">;
@@ -547,6 +589,7 @@ def HasFSGSBase  : Predicate<"Subtarget->hasFSGSBase()">;
 def HasLZCNT     : Predicate<"Subtarget->hasLZCNT()">;
 def HasBMI       : Predicate<"Subtarget->hasBMI()">;
 def HasBMI2      : Predicate<"Subtarget->hasBMI2()">;
+def HasRTM       : Predicate<"Subtarget->hasRTM()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
@@ -1232,28 +1275,46 @@ def BTS64mi8 : RIi8<0xBA, MRM5m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
 // Atomic support
 //
 
-
 // Atomic swap. These are just normal xchg instructions. But since a memory
 // operand is referenced, the atomicity is ensured.
-let Constraints = "$val = $dst" in {
-def XCHG8rm  : I<0x86, MRMSrcMem, (outs GR8:$dst), (ins GR8:$val, i8mem:$ptr),
-               "xchg{b}\t{$val, $ptr|$ptr, $val}",
-               [(set GR8:$dst, (atomic_swap_8 addr:$ptr, GR8:$val))],
-               IIC_XCHG_MEM>;
-def XCHG16rm : I<0x87, MRMSrcMem, (outs GR16:$dst),(ins GR16:$val, i16mem:$ptr),
-               "xchg{w}\t{$val, $ptr|$ptr, $val}",
-               [(set GR16:$dst, (atomic_swap_16 addr:$ptr, GR16:$val))],
-               IIC_XCHG_MEM>,
-                OpSize;
-def XCHG32rm : I<0x87, MRMSrcMem, (outs GR32:$dst),(ins GR32:$val, i32mem:$ptr),
-               "xchg{l}\t{$val, $ptr|$ptr, $val}",
-               [(set GR32:$dst, (atomic_swap_32 addr:$ptr, GR32:$val))],
-               IIC_XCHG_MEM>;
-def XCHG64rm : RI<0x87, MRMSrcMem, (outs GR64:$dst),(ins GR64:$val,i64mem:$ptr),
-                  "xchg{q}\t{$val, $ptr|$ptr, $val}",
-                  [(set GR64:$dst, (atomic_swap_64 addr:$ptr, GR64:$val))],
-                  IIC_XCHG_MEM>;
+multiclass ATOMIC_SWAP<bits<8> opc8, bits<8> opc, string mnemonic, string frag,
+                       InstrItinClass itin> {
+  let Constraints = "$val = $dst" in {
+    def #NAME#8rm  : I<opc8, MRMSrcMem, (outs GR8:$dst),
+                       (ins GR8:$val, i8mem:$ptr),
+                       !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
+                       [(set
+                          GR8:$dst,
+                          (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))],
+                       itin>;
+    def #NAME#16rm : I<opc, MRMSrcMem, (outs GR16:$dst),
+                       (ins GR16:$val, i16mem:$ptr),
+                       !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
+                       [(set
+                          GR16:$dst,
+                          (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))],
+                       itin>, OpSize;
+    def #NAME#32rm : I<opc, MRMSrcMem, (outs GR32:$dst),
+                       (ins GR32:$val, i32mem:$ptr),
+                       !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
+                       [(set
+                          GR32:$dst,
+                          (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))],
+                       itin>;
+    def #NAME#64rm : RI<opc, MRMSrcMem, (outs GR64:$dst),
+                        (ins GR64:$val, i64mem:$ptr),
+                        !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
+                        [(set
+                          GR64:$dst,
+                          (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))],
+                        itin>;
+  }
+}
 
+defm XCHG    : ATOMIC_SWAP<0x86, 0x87, "xchg", "atomic_swap", IIC_XCHG_MEM>;
+
+// Swap between registers.
+let Constraints = "$val = $dst" in {
 def XCHG8rr : I<0x86, MRMSrcReg, (outs GR8:$dst), (ins GR8:$val, GR8:$src),
                 "xchg{b}\t{$val, $src|$src, $val}", [], IIC_XCHG_REG>;
 def XCHG16rr : I<0x87, MRMSrcReg, (outs GR16:$dst), (ins GR16:$val, GR16:$src),
@@ -1264,6 +1325,7 @@ def XCHG64rr : RI<0x87, MRMSrcReg, (outs GR64:$dst), (ins GR64:$val,GR64:$src),
                   "xchg{q}\t{$val, $src|$src, $val}", [], IIC_XCHG_REG>;
 }
 
+// Swap between EAX and other registers.
 def XCHG16ar : I<0x90, AddRegFrm, (outs), (ins GR16:$src),
                   "xchg{w}\t{$src, %ax|AX, $src}", [], IIC_XCHG_REG>, OpSize;
 def XCHG32ar : I<0x90, AddRegFrm, (outs), (ins GR32:$src),
@@ -1466,11 +1528,14 @@ let Predicates = [HasMOVBE] in {
 //
 let Predicates = [HasRDRAND], Defs = [EFLAGS] in {
   def RDRAND16r : I<0xC7, MRM6r, (outs GR16:$dst), (ins),
-                    "rdrand{w}\t$dst", []>, OpSize, TB;
+                    "rdrand{w}\t$dst",
+                    [(set GR16:$dst, EFLAGS, (X86rdrand))]>, OpSize, TB;
   def RDRAND32r : I<0xC7, MRM6r, (outs GR32:$dst), (ins),
-                    "rdrand{l}\t$dst", []>, TB;
+                    "rdrand{l}\t$dst",
+                    [(set GR32:$dst, EFLAGS, (X86rdrand))]>, TB;
   def RDRAND64r : RI<0xC7, MRM6r, (outs GR64:$dst), (ins),
-                     "rdrand{q}\t$dst", []>, TB;
+                     "rdrand{q}\t$dst",
+                     [(set GR64:$dst, EFLAGS, (X86rdrand))]>, TB;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1641,6 +1706,8 @@ include "X86Instr3DNow.td"
 
 include "X86InstrVMX.td"
 include "X86InstrSVM.td"
+
+include "X86InstrTSX.td"
 
 // System instructions.
 include "X86InstrSystem.td"

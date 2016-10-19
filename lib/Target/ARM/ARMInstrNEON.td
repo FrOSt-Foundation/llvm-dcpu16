@@ -398,6 +398,41 @@ def VecListFourQWordIndexed : Operand<i32> {
   let MIOperandInfo = (ops DPR:$Vd, i32imm:$idx);
 }
 
+def dword_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() >= 8;
+}]>;
+def dword_alignedstore : PatFrag<(ops node:$val, node:$ptr),
+                                 (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() >= 8;
+}]>;
+def word_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() == 4;
+}]>;
+def word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
+                                 (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() == 4;
+}]>;
+def hword_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() == 2;
+}]>;
+def hword_alignedstore : PatFrag<(ops node:$val, node:$ptr),
+                                 (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() == 2;
+}]>;
+def byte_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() == 1;
+}]>;
+def byte_alignedstore : PatFrag<(ops node:$val, node:$ptr),
+                             (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() == 1;
+}]>;
+def non_word_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() < 4;
+}]>;
+def non_word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
+                                    (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() < 4;
+}]>;
 
 //===----------------------------------------------------------------------===//
 // NEON-specific DAG Nodes.
@@ -1959,7 +1994,7 @@ def VST1LNd8  : VST1LN<0b0000, {?,?,?,0}, "8", v8i8, truncstorei8,
 def VST1LNd16 : VST1LN<0b0100, {?,?,0,?}, "16", v4i16, truncstorei16,
                        NEONvgetlaneu, addrmode6> {
   let Inst{7-6} = lane{1-0};
-  let Inst{4}   = Rn{5};
+  let Inst{4}   = Rn{4};
 }
 
 def VST1LNd32 : VST1LN<0b1000, {?,0,?,?}, "32", v2i32, store, extractelt,
@@ -2002,7 +2037,7 @@ def VST1LNd8_UPD  : VST1LNWB<0b0000, {?,?,?,0}, "8", v8i8, post_truncsti8,
 def VST1LNd16_UPD : VST1LNWB<0b0100, {?,?,0,?}, "16", v4i16, post_truncsti16,
                              NEONvgetlaneu, addrmode6> {
   let Inst{7-6} = lane{1-0};
-  let Inst{4}   = Rn{5};
+  let Inst{4}   = Rn{4};
 }
 def VST1LNd32_UPD : VST1LNWB<0b1000, {?,0,?,?}, "32", v2i32, post_store,
                              extractelt, addrmode6oneL32> {
@@ -2238,6 +2273,38 @@ def VST4LNq32Pseudo_UPD : VSTQQQQLNWBPseudo<IIC_VST4lnu>;
 
 } // mayStore = 1, neverHasSideEffects = 1, hasExtraSrcRegAllocReq = 1
 
+// Use vld1/vst1 for unaligned f64 load / store
+def : Pat<(f64 (hword_alignedload addrmode6:$addr)),
+          (VLD1d16 addrmode6:$addr)>, Requires<[IsLE]>;
+def : Pat<(hword_alignedstore (f64 DPR:$value), addrmode6:$addr),
+          (VST1d16 addrmode6:$addr, DPR:$value)>, Requires<[IsLE]>;
+def : Pat<(f64 (byte_alignedload addrmode6:$addr)),
+          (VLD1d8 addrmode6:$addr)>, Requires<[IsLE]>;
+def : Pat<(byte_alignedstore (f64 DPR:$value), addrmode6:$addr),
+          (VST1d8 addrmode6:$addr, DPR:$value)>, Requires<[IsLE]>;
+def : Pat<(f64 (non_word_alignedload addrmode6:$addr)),
+          (VLD1d64 addrmode6:$addr)>, Requires<[IsBE]>;
+def : Pat<(non_word_alignedstore (f64 DPR:$value), addrmode6:$addr),
+          (VST1d64 addrmode6:$addr, DPR:$value)>, Requires<[IsBE]>;
+
+// Use vld1/vst1 for Q and QQ. Also use them for unaligned v2f64
+// load / store if it's legal.
+def : Pat<(v2f64 (dword_alignedload addrmode6:$addr)),
+          (VLD1q64 addrmode6:$addr)>;
+def : Pat<(dword_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q64 addrmode6:$addr, QPR:$value)>;
+def : Pat<(v2f64 (word_alignedload addrmode6:$addr)),
+          (VLD1q32 addrmode6:$addr)>;
+def : Pat<(word_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q32 addrmode6:$addr, QPR:$value)>;
+def : Pat<(v2f64 (hword_alignedload addrmode6:$addr)),
+          (VLD1q16 addrmode6:$addr)>, Requires<[IsLE]>;
+def : Pat<(hword_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q16 addrmode6:$addr, QPR:$value)>, Requires<[IsLE]>;
+def : Pat<(v2f64 (byte_alignedload addrmode6:$addr)),
+          (VLD1q8 addrmode6:$addr)>, Requires<[IsLE]>;
+def : Pat<(byte_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
+          (VST1q8 addrmode6:$addr, QPR:$value)>, Requires<[IsLE]>;
 
 //===----------------------------------------------------------------------===//
 // NEON pattern fragments
@@ -2300,14 +2367,14 @@ class N2VQ<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
 class N2VDInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
               bits<2> op17_16, bits<5> op11_7, bit op4,
               InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 0, op4, (outs DPR:$Vd),
         (ins DPR:$Vm), itin, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set DPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vm))))]>;
 class N2VQInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
               bits<2> op17_16, bits<5> op11_7, bit op4,
               InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 1, op4, (outs QPR:$Vd),
         (ins QPR:$Vm), itin, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set QPR:$Vd, (ResTy (IntOp (OpTy QPR:$Vm))))]>;
@@ -2325,7 +2392,7 @@ class N2VN<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
 class N2VNInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
               bits<2> op17_16, bits<5> op11_7, bit op6, bit op4,
               InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType TyD, ValueType TyQ, Intrinsic IntOp>
+              ValueType TyD, ValueType TyQ, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, op6, op4, (outs DPR:$Vd),
         (ins QPR:$Vm), itin, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set DPR:$Vd, (TyD (IntOp (TyQ QPR:$Vm))))]>;
@@ -2343,7 +2410,7 @@ class N2VL<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
 class N2VLInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
               bits<2> op17_16, bits<5> op11_7, bit op6, bit op4,
               InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType TyQ, ValueType TyD, Intrinsic IntOp>
+              ValueType TyQ, ValueType TyD, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, op6, op4, (outs QPR:$Vd),
         (ins DPR:$Vm), itin, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set QPR:$Vd, (TyQ (IntOp (TyD DPR:$Vm))))]>;
@@ -2465,7 +2532,7 @@ class N3VQSL16<bits<2> op21_20, bits<4> op11_8, string OpcodeStr, string Dt,
 // Basic 3-register intrinsics, both double- and quad-register.
 class N3VDInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               Format f, InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp, bit Commutable>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp, bit Commutable>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm), f, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "",
@@ -2475,7 +2542,7 @@ class N3VDInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
   let isCommutable = Commutable;
 }
 class N3VDIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
-                string OpcodeStr, string Dt, ValueType Ty, Intrinsic IntOp>
+                string OpcodeStr, string Dt, ValueType Ty, SDPatternOperator IntOp>
   : N3VLane32<0, 1, op21_20, op11_8, 1, 0,
         (outs DPR:$Vd), (ins DPR:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2486,7 +2553,7 @@ class N3VDIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
   let isCommutable = 0;
 }
 class N3VDIntSL16<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
-                  string OpcodeStr, string Dt, ValueType Ty, Intrinsic IntOp>
+                  string OpcodeStr, string Dt, ValueType Ty, SDPatternOperator IntOp>
   : N3VLane16<0, 1, op21_20, op11_8, 1, 0,
         (outs DPR:$Vd), (ins DPR:$Vn, DPR_8:$Vm, VectorIndex16:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2497,7 +2564,7 @@ class N3VDIntSL16<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
 }
 class N3VDIntSh<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               Format f, InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs DPR:$Vd), (ins DPR:$Vm, DPR:$Vn), f, itin,
         OpcodeStr, Dt, "$Vd, $Vm, $Vn", "",
@@ -2508,7 +2575,7 @@ class N3VDIntSh<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 
 class N3VQInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               Format f, InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp, bit Commutable>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp, bit Commutable>
   : N3V<op24, op23, op21_20, op11_8, 1, op4,
         (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm), f, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "",
@@ -2519,7 +2586,7 @@ class N3VQInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 }
 class N3VQIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                 string OpcodeStr, string Dt,
-                ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane32<1, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd), (ins QPR:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2531,7 +2598,7 @@ class N3VQIntSL<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
 }
 class N3VQIntSL16<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                   string OpcodeStr, string Dt,
-                  ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                  ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane16<1, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd), (ins QPR:$Vn, DPR_8:$Vm, VectorIndex16:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2543,7 +2610,7 @@ class N3VQIntSL16<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
 }
 class N3VQIntSh<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               Format f, InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+              ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3V<op24, op23, op21_20, op11_8, 1, op4,
         (outs QPR:$Vd), (ins QPR:$Vm, QPR:$Vn), f, itin,
         OpcodeStr, Dt, "$Vd, $Vm, $Vn", "",
@@ -2628,7 +2695,7 @@ class N3VQMulOpSL16<bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
 // Neon Intrinsic-Op instructions (VABA): double- and quad-register.
 class N3VDIntOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                 InstrItinClass itin, string OpcodeStr, string Dt,
-                ValueType Ty, Intrinsic IntOp, SDNode OpNode>
+                ValueType Ty, SDPatternOperator IntOp, SDNode OpNode>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs DPR:$Vd), (ins DPR:$src1, DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "$src1 = $Vd",
@@ -2636,7 +2703,7 @@ class N3VDIntOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                              (Ty (IntOp (Ty DPR:$Vn), (Ty DPR:$Vm))))))]>;
 class N3VQIntOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                 InstrItinClass itin, string OpcodeStr, string Dt,
-                ValueType Ty, Intrinsic IntOp, SDNode OpNode>
+                ValueType Ty, SDPatternOperator IntOp, SDNode OpNode>
   : N3V<op24, op23, op21_20, op11_8, 1, op4,
         (outs QPR:$Vd), (ins QPR:$src1, QPR:$Vn, QPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "$src1 = $Vd",
@@ -2647,7 +2714,7 @@ class N3VQIntOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 // The destination register is also used as the first source operand register.
 class N3VDInt3<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                InstrItinClass itin, string OpcodeStr, string Dt,
-               ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+               ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs DPR:$Vd), (ins DPR:$src1, DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "$src1 = $Vd",
@@ -2655,7 +2722,7 @@ class N3VDInt3<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                                       (OpTy DPR:$Vn), (OpTy DPR:$Vm))))]>;
 class N3VQInt3<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                InstrItinClass itin, string OpcodeStr, string Dt,
-               ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+               ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3V<op24, op23, op21_20, op11_8, 1, op4,
         (outs QPR:$Vd), (ins QPR:$src1, QPR:$Vn, QPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "$src1 = $Vd",
@@ -2700,7 +2767,7 @@ class N3VLMulOpSL16<bit op24, bits<2> op21_20, bits<4> op11_8,
 // Long Intrinsic-Op vector operations with explicit extend (VABAL).
 class N3VLIntExtOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                    InstrItinClass itin, string OpcodeStr, string Dt,
-                   ValueType TyQ, ValueType TyD, Intrinsic IntOp, SDNode ExtOp,
+                   ValueType TyQ, ValueType TyD, SDPatternOperator IntOp, SDNode ExtOp,
                    SDNode OpNode>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs QPR:$Vd), (ins QPR:$src1, DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
@@ -2713,7 +2780,7 @@ class N3VLIntExtOp<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 // a quad-register and is also used as the first source operand register.
 class N3VLInt3<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                InstrItinClass itin, string OpcodeStr, string Dt,
-               ValueType TyQ, ValueType TyD, Intrinsic IntOp>
+               ValueType TyQ, ValueType TyD, SDPatternOperator IntOp>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs QPR:$Vd), (ins QPR:$src1, DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "$src1 = $Vd",
@@ -2721,7 +2788,7 @@ class N3VLInt3<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
           (TyQ (IntOp (TyQ QPR:$src1), (TyD DPR:$Vn), (TyD DPR:$Vm))))]>;
 class N3VLInt3SL<bit op24, bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                  string OpcodeStr, string Dt,
-                 ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                 ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane32<op24, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd),
         (ins QPR:$src1, DPR:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
@@ -2734,7 +2801,7 @@ class N3VLInt3SL<bit op24, bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                                                 imm:$lane)))))]>;
 class N3VLInt3SL16<bit op24, bits<2> op21_20, bits<4> op11_8,
                    InstrItinClass itin, string OpcodeStr, string Dt,
-                   ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                   ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane16<op24, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd),
         (ins QPR:$src1, DPR:$Vn, DPR_8:$Vm, VectorIndex16:$lane),
@@ -2749,7 +2816,7 @@ class N3VLInt3SL16<bit op24, bits<2> op21_20, bits<4> op11_8,
 // Narrowing 3-register intrinsics.
 class N3VNInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               string OpcodeStr, string Dt, ValueType TyD, ValueType TyQ,
-              Intrinsic IntOp, bit Commutable>
+              SDPatternOperator IntOp, bit Commutable>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs DPR:$Vd), (ins QPR:$Vn, QPR:$Vm), N3RegFrm, IIC_VBINi4D,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "",
@@ -2802,7 +2869,7 @@ class N3VLExt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 // Long 3-register intrinsics with explicit extend (VABDL).
 class N3VLIntExt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
                  InstrItinClass itin, string OpcodeStr, string Dt,
-                 ValueType TyQ, ValueType TyD, Intrinsic IntOp, SDNode ExtOp,
+                 ValueType TyQ, ValueType TyD, SDPatternOperator IntOp, SDNode ExtOp,
                  bit Commutable>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs QPR:$Vd), (ins DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
@@ -2815,7 +2882,7 @@ class N3VLIntExt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 // Long 3-register intrinsics.
 class N3VLInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
               InstrItinClass itin, string OpcodeStr, string Dt,
-              ValueType TyQ, ValueType TyD, Intrinsic IntOp, bit Commutable>
+              ValueType TyQ, ValueType TyD, SDPatternOperator IntOp, bit Commutable>
   : N3V<op24, op23, op21_20, op11_8, 0, op4,
         (outs QPR:$Vd), (ins DPR:$Vn, DPR:$Vm), N3RegFrm, itin,
         OpcodeStr, Dt, "$Vd, $Vn, $Vm", "",
@@ -2824,7 +2891,7 @@ class N3VLInt<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 }
 class N3VLIntSL<bit op24, bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                 string OpcodeStr, string Dt,
-                ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane32<op24, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd), (ins DPR:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2834,7 +2901,7 @@ class N3VLIntSL<bit op24, bits<2> op21_20, bits<4> op11_8, InstrItinClass itin,
                                                 imm:$lane)))))]>;
 class N3VLIntSL16<bit op24, bits<2> op21_20, bits<4> op11_8,
                   InstrItinClass itin, string OpcodeStr, string Dt,
-                  ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                  ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N3VLane16<op24, 1, op21_20, op11_8, 1, 0,
         (outs QPR:$Vd), (ins DPR:$Vn, DPR_8:$Vm, VectorIndex16:$lane),
         NVMulSLFrm, itin, OpcodeStr, Dt, "$Vd, $Vn, $Vm$lane", "",
@@ -2861,14 +2928,14 @@ class N3VW<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
 class N2VDPLInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
                 bits<2> op17_16, bits<5> op11_7, bit op4,
                 string OpcodeStr, string Dt,
-                ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 0, op4, (outs DPR:$Vd),
         (ins DPR:$Vm), IIC_VSHLiD, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set DPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vm))))]>;
 class N2VQPLInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
                 bits<2> op17_16, bits<5> op11_7, bit op4,
                 string OpcodeStr, string Dt,
-                ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 1, op4, (outs QPR:$Vd),
         (ins QPR:$Vm), IIC_VSHLiD, OpcodeStr, Dt, "$Vd, $Vm", "",
         [(set QPR:$Vd, (ResTy (IntOp (OpTy QPR:$Vm))))]>;
@@ -2879,7 +2946,7 @@ class N2VQPLInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
 class N2VDPLInt2<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
                  bits<2> op17_16, bits<5> op11_7, bit op4,
                  string OpcodeStr, string Dt,
-                 ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                 ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 0, op4,
         (outs DPR:$Vd), (ins DPR:$src1, DPR:$Vm), IIC_VPALiD,
         OpcodeStr, Dt, "$Vd, $Vm", "$src1 = $Vd",
@@ -2887,7 +2954,7 @@ class N2VDPLInt2<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
 class N2VQPLInt2<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
                  bits<2> op17_16, bits<5> op11_7, bit op4,
                  string OpcodeStr, string Dt,
-                 ValueType ResTy, ValueType OpTy, Intrinsic IntOp>
+                 ValueType ResTy, ValueType OpTy, SDPatternOperator IntOp>
   : N2V<op24_23, op21_20, op19_18, op17_16, op11_7, 1, op4,
         (outs QPR:$Vd), (ins QPR:$src1, QPR:$Vm), IIC_VPALiQ,
         OpcodeStr, Dt, "$Vd, $Vm", "$src1 = $Vd",
@@ -2976,14 +3043,14 @@ class N2VQShIns<bit op24, bit op23, bits<4> op11_8, bit op7, bit op4,
 // both double- and quad-register.
 class N2VCvtD<bit op24, bit op23, bits<4> op11_8, bit op7, bit op4,
               string OpcodeStr, string Dt, ValueType ResTy, ValueType OpTy,
-              Intrinsic IntOp>
+              SDPatternOperator IntOp>
   : N2VImm<op24, op23, op11_8, op7, 0, op4,
            (outs DPR:$Vd), (ins DPR:$Vm, neon_vcvt_imm32:$SIMM), NVCVTFrm,
            IIC_VUNAD, OpcodeStr, Dt, "$Vd, $Vm, $SIMM", "",
            [(set DPR:$Vd, (ResTy (IntOp (OpTy DPR:$Vm), (i32 imm:$SIMM))))]>;
 class N2VCvtQ<bit op24, bit op23, bits<4> op11_8, bit op7, bit op4,
               string OpcodeStr, string Dt, ValueType ResTy, ValueType OpTy,
-              Intrinsic IntOp>
+              SDPatternOperator IntOp>
   : N2VImm<op24, op23, op11_8, op7, 1, op4,
            (outs QPR:$Vd), (ins QPR:$Vm, neon_vcvt_imm32:$SIMM), NVCVTFrm,
            IIC_VUNAQ, OpcodeStr, Dt, "$Vd, $Vm, $SIMM", "",
@@ -3053,7 +3120,7 @@ multiclass N2V_QHS_cmp<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
 multiclass N2VInt_QHS<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
                       bits<5> op11_7, bit op4,
                       InstrItinClass itinD, InstrItinClass itinQ,
-                      string OpcodeStr, string Dt, Intrinsic IntOp> {
+                      string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   // 64-bit vector types.
   def v8i8  : N2VDInt<op24_23, op21_20, 0b00, op17_16, op11_7, op4,
                       itinD, OpcodeStr, !strconcat(Dt, "8"), v8i8, v8i8, IntOp>;
@@ -3094,7 +3161,7 @@ multiclass N2VN_HSD<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
 multiclass N2VNInt_HSD<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
                        bits<5> op11_7, bit op6, bit op4,
                        InstrItinClass itin, string OpcodeStr, string Dt,
-                       Intrinsic IntOp> {
+                       SDPatternOperator IntOp> {
   def v8i8  : N2VNInt<op24_23, op21_20, 0b00, op17_16, op11_7, op6, op4,
                       itin, OpcodeStr, !strconcat(Dt, "16"),
                       v8i8, v8i16, IntOp>;
@@ -3182,7 +3249,7 @@ multiclass N3VInt_HS<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                      InstrItinClass itinD16, InstrItinClass itinD32,
                      InstrItinClass itinQ16, InstrItinClass itinQ32,
                      string OpcodeStr, string Dt,
-                     Intrinsic IntOp, bit Commutable = 0> {
+                     SDPatternOperator IntOp, bit Commutable = 0> {
   // 64-bit vector types.
   def v4i16 : N3VDInt<op24, op23, 0b01, op11_8, op4, f, itinD16,
                       OpcodeStr, !strconcat(Dt, "16"),
@@ -3203,7 +3270,7 @@ multiclass N3VInt_HSSh<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                      InstrItinClass itinD16, InstrItinClass itinD32,
                      InstrItinClass itinQ16, InstrItinClass itinQ32,
                      string OpcodeStr, string Dt,
-                     Intrinsic IntOp> {
+                     SDPatternOperator IntOp> {
   // 64-bit vector types.
   def v4i16 : N3VDIntSh<op24, op23, 0b01, op11_8, op4, f, itinD16,
                       OpcodeStr, !strconcat(Dt, "16"),
@@ -3224,7 +3291,7 @@ multiclass N3VInt_HSSh<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
 multiclass N3VIntSL_HS<bits<4> op11_8,
                        InstrItinClass itinD16, InstrItinClass itinD32,
                        InstrItinClass itinQ16, InstrItinClass itinQ32,
-                       string OpcodeStr, string Dt, Intrinsic IntOp> {
+                       string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   def v4i16 : N3VDIntSL16<0b01, op11_8, itinD16,
                           OpcodeStr, !strconcat(Dt, "16"), v4i16, IntOp>;
   def v2i32 : N3VDIntSL<0b10, op11_8, itinD32,
@@ -3240,7 +3307,7 @@ multiclass N3VInt_QHS<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                       InstrItinClass itinD16, InstrItinClass itinD32,
                       InstrItinClass itinQ16, InstrItinClass itinQ32,
                       string OpcodeStr, string Dt,
-                      Intrinsic IntOp, bit Commutable = 0>
+                      SDPatternOperator IntOp, bit Commutable = 0>
   : N3VInt_HS<op24, op23, op11_8, op4, f, itinD16, itinD32, itinQ16, itinQ32,
               OpcodeStr, Dt, IntOp, Commutable> {
   def v8i8  : N3VDInt<op24, op23, 0b00, op11_8, op4, f, itinD16,
@@ -3254,7 +3321,7 @@ multiclass N3VInt_QHSSh<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                       InstrItinClass itinD16, InstrItinClass itinD32,
                       InstrItinClass itinQ16, InstrItinClass itinQ32,
                       string OpcodeStr, string Dt,
-                      Intrinsic IntOp>
+                      SDPatternOperator IntOp>
   : N3VInt_HSSh<op24, op23, op11_8, op4, f, itinD16, itinD32, itinQ16, itinQ32,
               OpcodeStr, Dt, IntOp> {
   def v8i8  : N3VDIntSh<op24, op23, 0b00, op11_8, op4, f, itinD16,
@@ -3271,7 +3338,7 @@ multiclass N3VInt_QHSD<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                        InstrItinClass itinD16, InstrItinClass itinD32,
                        InstrItinClass itinQ16, InstrItinClass itinQ32,
                        string OpcodeStr, string Dt,
-                       Intrinsic IntOp, bit Commutable = 0>
+                       SDPatternOperator IntOp, bit Commutable = 0>
   : N3VInt_QHS<op24, op23, op11_8, op4, f, itinD16, itinD32, itinQ16, itinQ32,
                OpcodeStr, Dt, IntOp, Commutable> {
   def v1i64 : N3VDInt<op24, op23, 0b11, op11_8, op4, f, itinD32,
@@ -3285,7 +3352,7 @@ multiclass N3VInt_QHSDSh<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
                        InstrItinClass itinD16, InstrItinClass itinD32,
                        InstrItinClass itinQ16, InstrItinClass itinQ32,
                        string OpcodeStr, string Dt,
-                       Intrinsic IntOp>
+                       SDPatternOperator IntOp>
   : N3VInt_QHSSh<op24, op23, op11_8, op4, f, itinD16, itinD32, itinQ16, itinQ32,
                OpcodeStr, Dt, IntOp> {
   def v1i64 : N3VDIntSh<op24, op23, 0b11, op11_8, op4, f, itinD32,
@@ -3300,7 +3367,7 @@ multiclass N3VInt_QHSDSh<bit op24, bit op23, bits<4> op11_8, bit op4, Format f,
 //   source operand element sizes of 16, 32 and 64 bits:
 multiclass N3VNInt_HSD<bit op24, bit op23, bits<4> op11_8, bit op4,
                        string OpcodeStr, string Dt,
-                       Intrinsic IntOp, bit Commutable = 0> {
+                       SDPatternOperator IntOp, bit Commutable = 0> {
   def v8i8  : N3VNInt<op24, op23, 0b00, op11_8, op4,
                       OpcodeStr, !strconcat(Dt, "16"),
                       v8i8, v8i16, IntOp, Commutable>;
@@ -3360,7 +3427,7 @@ multiclass N3VLExt_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
 multiclass N3VLInt_HS<bit op24, bit op23, bits<4> op11_8, bit op4,
                       InstrItinClass itin16, InstrItinClass itin32,
                       string OpcodeStr, string Dt,
-                      Intrinsic IntOp, bit Commutable = 0> {
+                      SDPatternOperator IntOp, bit Commutable = 0> {
   def v4i32 : N3VLInt<op24, op23, 0b01, op11_8, op4, itin16,
                       OpcodeStr, !strconcat(Dt, "16"),
                       v4i32, v4i16, IntOp, Commutable>;
@@ -3371,7 +3438,7 @@ multiclass N3VLInt_HS<bit op24, bit op23, bits<4> op11_8, bit op4,
 
 multiclass N3VLIntSL_HS<bit op24, bits<4> op11_8,
                         InstrItinClass itin, string OpcodeStr, string Dt,
-                        Intrinsic IntOp> {
+                        SDPatternOperator IntOp> {
   def v4i16 : N3VLIntSL16<op24, 0b01, op11_8, itin,
                           OpcodeStr, !strconcat(Dt, "16"), v4i32, v4i16, IntOp>;
   def v2i32 : N3VLIntSL<op24, 0b10, op11_8, itin,
@@ -3382,7 +3449,7 @@ multiclass N3VLIntSL_HS<bit op24, bits<4> op11_8,
 multiclass N3VLInt_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                        InstrItinClass itin16, InstrItinClass itin32,
                        string OpcodeStr, string Dt,
-                       Intrinsic IntOp, bit Commutable = 0>
+                       SDPatternOperator IntOp, bit Commutable = 0>
   : N3VLInt_HS<op24, op23, op11_8, op4, itin16, itin32, OpcodeStr, Dt,
                IntOp, Commutable> {
   def v8i16 : N3VLInt<op24, op23, 0b00, op11_8, op4, itin16,
@@ -3393,7 +3460,7 @@ multiclass N3VLInt_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
 // ....with explicit extend (VABDL).
 multiclass N3VLIntExt_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                        InstrItinClass itin, string OpcodeStr, string Dt,
-                       Intrinsic IntOp, SDNode ExtOp, bit Commutable = 0> {
+                       SDPatternOperator IntOp, SDNode ExtOp, bit Commutable = 0> {
   def v8i16 : N3VLIntExt<op24, op23, 0b00, op11_8, op4, itin,
                          OpcodeStr, !strconcat(Dt, "8"),
                          v8i16, v8i8, IntOp, ExtOp, Commutable>;
@@ -3466,7 +3533,7 @@ multiclass N3VMulOpSL_HS<bits<4> op11_8,
 //   element sizes of 8, 16 and 32 bits:
 multiclass N3VIntOp_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                         InstrItinClass itinD, InstrItinClass itinQ,
-                        string OpcodeStr, string Dt, Intrinsic IntOp,
+                        string OpcodeStr, string Dt, SDPatternOperator IntOp,
                         SDNode OpNode> {
   // 64-bit vector types.
   def v8i8  : N3VDIntOp<op24, op23, 0b00, op11_8, op4, itinD,
@@ -3489,7 +3556,7 @@ multiclass N3VIntOp_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
 //   element sizes of 8, 16 and 32 bits:
 multiclass N3VInt3_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                        InstrItinClass itinD, InstrItinClass itinQ,
-                       string OpcodeStr, string Dt, Intrinsic IntOp> {
+                       string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   // 64-bit vector types.
   def v8i8  : N3VDInt3<op24, op23, 0b00, op11_8, op4, itinD,
                        OpcodeStr, !strconcat(Dt, "8"), v8i8, v8i8, IntOp>;
@@ -3536,7 +3603,7 @@ multiclass N3VLMulOpSL_HS<bit op24, bits<4> op11_8, string OpcodeStr,
 // First with only element sizes of 16 and 32 bits:
 multiclass N3VLInt3_HS<bit op24, bit op23, bits<4> op11_8, bit op4,
                        InstrItinClass itin16, InstrItinClass itin32,
-                       string OpcodeStr, string Dt, Intrinsic IntOp> {
+                       string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   def v4i32 : N3VLInt3<op24, op23, 0b01, op11_8, op4, itin16,
                        OpcodeStr, !strconcat(Dt, "16"), v4i32, v4i16, IntOp>;
   def v2i64 : N3VLInt3<op24, op23, 0b10, op11_8, op4, itin32,
@@ -3544,7 +3611,7 @@ multiclass N3VLInt3_HS<bit op24, bit op23, bits<4> op11_8, bit op4,
 }
 
 multiclass N3VLInt3SL_HS<bit op24, bits<4> op11_8,
-                         string OpcodeStr, string Dt, Intrinsic IntOp> {
+                         string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   def v4i16 : N3VLInt3SL16<op24, 0b01, op11_8, IIC_VMACi16D,
                            OpcodeStr, !strconcat(Dt,"16"), v4i32, v4i16, IntOp>;
   def v2i32 : N3VLInt3SL<op24, 0b10, op11_8, IIC_VMACi32D,
@@ -3554,7 +3621,7 @@ multiclass N3VLInt3SL_HS<bit op24, bits<4> op11_8,
 // ....then also with element size of 8 bits:
 multiclass N3VLInt3_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                         InstrItinClass itin16, InstrItinClass itin32,
-                        string OpcodeStr, string Dt, Intrinsic IntOp>
+                        string OpcodeStr, string Dt, SDPatternOperator IntOp>
   : N3VLInt3_HS<op24, op23, op11_8, op4, itin16, itin32, OpcodeStr, Dt, IntOp> {
   def v8i16 : N3VLInt3<op24, op23, 0b00, op11_8, op4, itin16,
                        OpcodeStr, !strconcat(Dt, "8"), v8i16, v8i8, IntOp>;
@@ -3563,7 +3630,7 @@ multiclass N3VLInt3_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
 // ....with explicit extend (VABAL).
 multiclass N3VLIntExtOp_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
                             InstrItinClass itin, string OpcodeStr, string Dt,
-                            Intrinsic IntOp, SDNode ExtOp, SDNode OpNode> {
+                            SDPatternOperator IntOp, SDNode ExtOp, SDNode OpNode> {
   def v8i16 : N3VLIntExtOp<op24, op23, 0b00, op11_8, op4, itin,
                            OpcodeStr, !strconcat(Dt, "8"), v8i16, v8i8,
                            IntOp, ExtOp, OpNode>;
@@ -3580,7 +3647,7 @@ multiclass N3VLIntExtOp_QHS<bit op24, bit op23, bits<4> op11_8, bit op4,
 //   element sizes of 8, 16 and 32 bits:
 multiclass N2VPLInt_QHS<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
                         bits<5> op11_7, bit op4,
-                        string OpcodeStr, string Dt, Intrinsic IntOp> {
+                        string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   // 64-bit vector types.
   def v8i8  : N2VDPLInt<op24_23, op21_20, 0b00, op17_16, op11_7, op4,
                         OpcodeStr, !strconcat(Dt, "8"), v4i16, v8i8, IntOp>;
@@ -3603,7 +3670,7 @@ multiclass N2VPLInt_QHS<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
 //   element sizes of 8, 16 and 32 bits:
 multiclass N2VPLInt2_QHS<bits<2> op24_23, bits<2> op21_20, bits<2> op17_16,
                          bits<5> op11_7, bit op4,
-                         string OpcodeStr, string Dt, Intrinsic IntOp> {
+                         string OpcodeStr, string Dt, SDPatternOperator IntOp> {
   // 64-bit vector types.
   def v8i8  : N2VDPLInt2<op24_23, op21_20, 0b00, op17_16, op11_7, op4,
                          OpcodeStr, !strconcat(Dt, "8"), v4i16, v8i8, IntOp>;
@@ -4421,10 +4488,36 @@ def  VBSLd    : N3VX<1, 0, 0b01, 0b0001, 0, 1, (outs DPR:$Vd),
                      "vbsl", "$Vd, $Vn, $Vm", "$src1 = $Vd",
                      [(set DPR:$Vd,
                            (v2i32 (NEONvbsl DPR:$src1, DPR:$Vn, DPR:$Vm)))]>;
+def : Pat<(v8i8 (int_arm_neon_vbsl (v8i8 DPR:$src1),
+                                   (v8i8 DPR:$Vn), (v8i8 DPR:$Vm))),
+          (VBSLd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v4i16 (int_arm_neon_vbsl (v4i16 DPR:$src1),
+                                    (v4i16 DPR:$Vn), (v4i16 DPR:$Vm))),
+          (VBSLd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v2i32 (int_arm_neon_vbsl (v2i32 DPR:$src1),
+                                    (v2i32 DPR:$Vn), (v2i32 DPR:$Vm))),
+          (VBSLd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v2f32 (int_arm_neon_vbsl (v2f32 DPR:$src1),
+                                    (v2f32 DPR:$Vn), (v2f32 DPR:$Vm))),
+          (VBSLd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v1i64 (int_arm_neon_vbsl (v1i64 DPR:$src1),
+                                    (v1i64 DPR:$Vn), (v1i64 DPR:$Vm))),
+          (VBSLd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
 
 def : Pat<(v2i32 (or (and DPR:$Vn, DPR:$Vd),
                      (and DPR:$Vm, (vnotd DPR:$Vd)))),
-          (VBSLd DPR:$Vd, DPR:$Vn, DPR:$Vm)>;
+          (VBSLd DPR:$Vd, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
+
+def : Pat<(v1i64 (or (and DPR:$Vn, DPR:$Vd),
+                     (and DPR:$Vm, (vnotd DPR:$Vd)))),
+          (VBSLd DPR:$Vd, DPR:$Vn, DPR:$Vm)>,
+        Requires<[HasNEON]>;
 
 def  VBSLq    : N3VX<1, 0, 0b01, 0b0001, 1, 1, (outs QPR:$Vd),
                      (ins QPR:$src1, QPR:$Vn, QPR:$Vm),
@@ -4433,9 +4526,35 @@ def  VBSLq    : N3VX<1, 0, 0b01, 0b0001, 1, 1, (outs QPR:$Vd),
                      [(set QPR:$Vd,
                            (v4i32 (NEONvbsl QPR:$src1, QPR:$Vn, QPR:$Vm)))]>;
 
+def : Pat<(v16i8 (int_arm_neon_vbsl (v16i8 QPR:$src1),
+                                   (v16i8 QPR:$Vn), (v16i8 QPR:$Vm))),
+          (VBSLq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v8i16 (int_arm_neon_vbsl (v8i16 QPR:$src1),
+                                    (v8i16 QPR:$Vn), (v8i16 QPR:$Vm))),
+          (VBSLq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v4i32 (int_arm_neon_vbsl (v4i32 QPR:$src1),
+                                    (v4i32 QPR:$Vn), (v4i32 QPR:$Vm))),
+          (VBSLq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v4f32 (int_arm_neon_vbsl (v4f32 QPR:$src1),
+                                    (v4f32 QPR:$Vn), (v4f32 QPR:$Vm))),
+          (VBSLq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v2i64 (int_arm_neon_vbsl (v2i64 QPR:$src1),
+                                    (v2i64 QPR:$Vn), (v2i64 QPR:$Vm))),
+          (VBSLq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+
 def : Pat<(v4i32 (or (and QPR:$Vn, QPR:$Vd),
                      (and QPR:$Vm, (vnotq QPR:$Vd)))),
-          (VBSLq QPR:$Vd, QPR:$Vn, QPR:$Vm)>;
+          (VBSLq QPR:$Vd, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
+def : Pat<(v2i64 (or (and QPR:$Vn, QPR:$Vd),
+                     (and QPR:$Vm, (vnotq QPR:$Vd)))),
+          (VBSLq QPR:$Vd, QPR:$Vn, QPR:$Vm)>,
+        Requires<[HasNEON]>;
 
 //   VBIF     : Vector Bitwise Insert if False
 //              like VBSL but with: "vbif $dst, $src3, $src1", "$src2 = $dst",
@@ -4825,14 +4944,14 @@ defm VCLS     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01000, 0,
 //   VCLZ     : Vector Count Leading Zeros
 defm VCLZ     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01001, 0,
                            IIC_VCNTiD, IIC_VCNTiQ, "vclz", "i",
-                           int_arm_neon_vclz>;
+                           ctlz>;
 //   VCNT     : Vector Count One Bits
 def  VCNTd    : N2VDInt<0b11, 0b11, 0b00, 0b00, 0b01010, 0,
                         IIC_VCNTiD, "vcnt", "8",
-                        v8i8, v8i8, int_arm_neon_vcnt>;
+                        v8i8, v8i8, ctpop>;
 def  VCNTq    : N2VQInt<0b11, 0b11, 0b00, 0b00, 0b01010, 0,
                         IIC_VCNTiQ, "vcnt", "8",
-                        v16i8, v16i8, int_arm_neon_vcnt>;
+                        v16i8, v16i8, ctpop>;
 
 // Vector Swap
 def  VSWPd    : N2VX<0b11, 0b11, 0b00, 0b10, 0b00000, 0, 0,
@@ -4949,7 +5068,8 @@ def VGETLNi32 : NVGetLane<{1,1,1,0,0,0,?,1}, 0b1011, 0b00,
                           (outs GPR:$R), (ins DPR:$V, VectorIndex32:$lane),
                           IIC_VMOVSI, "vmov", "32", "$R, $V$lane",
                           [(set GPR:$R, (extractelt (v2i32 DPR:$V),
-                                           imm:$lane))]> {
+                                           imm:$lane))]>,
+                Requires<[HasNEON, HasFastVGETLNi32]> {
   let Inst{21} = lane{0};
 }
 // def VGETLNf32: see FMRDH and FMRDL in ARMInstrVFP.td
@@ -4972,7 +5092,16 @@ def : Pat<(NEONvgetlaneu (v8i16 QPR:$src), imm:$lane),
 def : Pat<(extractelt (v4i32 QPR:$src), imm:$lane),
           (VGETLNi32 (v2i32 (EXTRACT_SUBREG QPR:$src,
                              (DSubReg_i32_reg imm:$lane))),
-                     (SubReg_i32_lane imm:$lane))>;
+                     (SubReg_i32_lane imm:$lane))>,
+      Requires<[HasNEON, HasFastVGETLNi32]>;
+def : Pat<(extractelt (v2i32 DPR:$src), imm:$lane),
+          (COPY_TO_REGCLASS
+            (i32 (EXTRACT_SUBREG DPR:$src, (SSubReg_f32_reg imm:$lane))), GPR)>,
+      Requires<[HasNEON, HasSlowVGETLNi32]>;
+def : Pat<(extractelt (v4i32 QPR:$src), imm:$lane),
+          (COPY_TO_REGCLASS
+            (i32 (EXTRACT_SUBREG QPR:$src, (SSubReg_f32_reg imm:$lane))), GPR)>,
+      Requires<[HasNEON, HasSlowVGETLNi32]>;
 def : Pat<(extractelt (v2f32 DPR:$src1), imm:$src2),
           (EXTRACT_SUBREG (v2f32 (COPY_TO_REGCLASS (v2f32 DPR:$src1),DPR_VFP2)),
                           (SSubReg_f32_reg imm:$src2))>;
@@ -5083,13 +5212,22 @@ class VDUPQ<bits<8> opcod1, bits<2> opcod3, string Dt, ValueType Ty>
 
 def  VDUP8d   : VDUPD<0b11101100, 0b00, "8", v8i8>;
 def  VDUP16d  : VDUPD<0b11101000, 0b01, "16", v4i16>;
-def  VDUP32d  : VDUPD<0b11101000, 0b00, "32", v2i32>;
+def  VDUP32d  : VDUPD<0b11101000, 0b00, "32", v2i32>,
+                Requires<[HasNEON, HasFastVDUP32]>;
 def  VDUP8q   : VDUPQ<0b11101110, 0b00, "8", v16i8>;
 def  VDUP16q  : VDUPQ<0b11101010, 0b01, "16", v8i16>;
 def  VDUP32q  : VDUPQ<0b11101010, 0b00, "32", v4i32>;
 
-def : Pat<(v2f32 (NEONvdup (f32 (bitconvert GPR:$R)))), (VDUP32d GPR:$R)>;
+// NEONvdup patterns for uarchs with fast VDUP.32.
+def : Pat<(v2f32 (NEONvdup (f32 (bitconvert GPR:$R)))), (VDUP32d GPR:$R)>,
+      Requires<[HasNEON,HasFastVDUP32]>;
 def : Pat<(v4f32 (NEONvdup (f32 (bitconvert GPR:$R)))), (VDUP32q GPR:$R)>;
+
+// NEONvdup patterns for uarchs with slow VDUP.32 - use VMOVDRR instead.
+def : Pat<(v2i32 (NEONvdup (i32 GPR:$R))), (VMOVDRR GPR:$R, GPR:$R)>,
+      Requires<[HasNEON,HasSlowVDUP32]>;
+def : Pat<(v2f32 (NEONvdup (f32 (bitconvert GPR:$R)))), (VMOVDRR GPR:$R, GPR:$R)>,
+      Requires<[HasNEON,HasSlowVDUP32]>;
 
 //   VDUP     : Vector Duplicate Lane (from scalar to all elements)
 
@@ -5527,6 +5665,11 @@ def : N2VSPat<arm_ftoui, VCVTf2ud>;
 def : N2VSPat<arm_sitof, VCVTs2fd>;
 def : N2VSPat<arm_uitof, VCVTu2fd>;
 
+// Prefer VMOVDRR for i32 -> f32 bitcasts, it can write all DPR registers.
+def : Pat<(f32 (bitconvert GPR:$a)),
+          (EXTRACT_SUBREG (VMOVDRR GPR:$a, GPR:$a), ssub_0)>,
+        Requires<[HasNEON, DontUseVMOVSR]>;
+
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
@@ -5597,26 +5740,27 @@ def : Pat<(v2f64 (bitconvert (v4f32 QPR:$src))), (v2f64 QPR:$src)>;
 // Vector lengthening move with load, matching extending loads.
 
 // extload, zextload and sextload for a standard lengthening load. Example:
-// Lengthen_Single<"8", "i16", "i8"> = 
-//     Pat<(v8i16 (extloadvi8 addrmode6oneL32:$addr))
-//         (VMOVLuv8i16 (VLD1LNd32 addrmode6oneL32:$addr,
-//                                 (f64 (IMPLICIT_DEF)), (i32 0)))>;
+// Lengthen_Single<"8", "i16", "8"> = 
+//     Pat<(v8i16 (extloadvi8 addrmode6:$addr))
+//         (VMOVLuv8i16 (VLD1d8 addrmode6:$addr,
+//                              (f64 (IMPLICIT_DEF)), (i32 0)))>;
 multiclass Lengthen_Single<string DestLanes, string DestTy, string SrcTy> {
+  let AddedComplexity = 10 in {
   def _Any : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                    (!cast<PatFrag>("extloadv" # SrcTy) addrmode6oneL32:$addr)),
+                    (!cast<PatFrag>("extloadvi" # SrcTy) addrmode6:$addr)),
                   (!cast<Instruction>("VMOVLuv" # DestLanes # DestTy)
-                    (VLD1LNd32 addrmode6oneL32:$addr, 
-                               (f64 (IMPLICIT_DEF)), (i32 0)))>;
+                    (!cast<Instruction>("VLD1d" # SrcTy) addrmode6:$addr))>;
+
   def _Z : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                  (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6oneL32:$addr)),
+                  (!cast<PatFrag>("zextloadvi" # SrcTy) addrmode6:$addr)),
                 (!cast<Instruction>("VMOVLuv" # DestLanes # DestTy)
-                    (VLD1LNd32 addrmode6oneL32:$addr, 
-                               (f64 (IMPLICIT_DEF)), (i32 0)))>;
+                    (!cast<Instruction>("VLD1d" # SrcTy) addrmode6:$addr))>;
+
   def _S : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                  (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6oneL32:$addr)),
+                  (!cast<PatFrag>("sextloadvi" # SrcTy) addrmode6:$addr)),
                 (!cast<Instruction>("VMOVLsv" # DestLanes # DestTy)
-                    (VLD1LNd32 addrmode6oneL32:$addr, 
-                               (f64 (IMPLICIT_DEF)), (i32 0)))>;
+                    (!cast<Instruction>("VLD1d" # SrcTy) addrmode6:$addr))>;
+  }
 }
 
 // extload, zextload and sextload for a lengthening load which only uses
@@ -5648,8 +5792,8 @@ multiclass Lengthen_HalfSingle<string DestLanes, string DestTy, string SrcTy,
 // extload, zextload and sextload for a lengthening load followed by another
 // lengthening load, to quadruple the initial length.
 //
-// Lengthen_Double<"4", "i32", "i8", "8", "i16", "4", "i32", qsub_0> =
-//     Pat<(v4i32 (extloadvi8 addrmode5:$addr))
+// Lengthen_Double<"4", "i32", "i8", "8", "i16", "4", "i32"> =
+//     Pat<(v4i32 (extloadvi8 addrmode6oneL32:$addr))
 //         (EXTRACT_SUBREG (VMOVLuv4i32
 //           (EXTRACT_SUBREG (VMOVLuv8i16 (VLD1LNd32 addrmode6oneL32:$addr,
 //                                                   (f64 (IMPLICIT_DEF)),
@@ -5663,19 +5807,19 @@ multiclass Lengthen_Double<string DestLanes, string DestTy, string SrcTy,
                    (!cast<PatFrag>("extloadv" # SrcTy) addrmode6oneL32:$addr)),
          (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0))>;
   def _Z   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6oneL32:$addr)),
          (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0))>;
   def _S   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6oneL32:$addr)),
          (!cast<Instruction>("VMOVLsv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0))>;
 }
 
@@ -5684,9 +5828,9 @@ multiclass Lengthen_Double<string DestLanes, string DestTy, string SrcTy,
 // requiring half the available lanes (a 64-bit outcome instead of a 128-bit).
 //
 // Lengthen_HalfDouble<"2", "i32", "i8", "8", "i16", "4", "i32"> =
-// Pat<(v4i32 (extloadvi8 addrmode5:$addr))
+// Pat<(v2i32 (extloadvi8 addrmode6:$addr))
 //     (EXTRACT_SUBREG (VMOVLuv4i32
-//       (EXTRACT_SUBREG (VMOVLuv8i16 (VLD1LNd32 addrmode6oneL32:$addr,
+//       (EXTRACT_SUBREG (VMOVLuv8i16 (VLD1LNd16 addrmode6:$addr,
 //                                               (f64 (IMPLICIT_DEF)), (i32 0))),
 //                       dsub_0)),
 //       dsub_0)>;
@@ -5694,34 +5838,33 @@ multiclass Lengthen_HalfDouble<string DestLanes, string DestTy, string SrcTy,
                            string Insn1Lanes, string Insn1Ty, string Insn2Lanes,
                            string Insn2Ty> {
   def _Any : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                   (!cast<PatFrag>("extloadv" # SrcTy) addrmode6oneL32:$addr)),
+                   (!cast<PatFrag>("extloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0)),
           dsub_0)>;
   def _Z   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                   (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6oneL32:$addr)),
+                   (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0)),
           dsub_0)>;
   def _S   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
-                   (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6oneL32:$addr)),
+                   (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn1Lanes # Insn1Ty)
-             (VLD1LNd32 addrmode6oneL32:$addr, (f64 (IMPLICIT_DEF)), (i32 0))), 
+             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0))),
              dsub_0)),
           dsub_0)>;
 }
 
-defm : Lengthen_Single<"8", "i16", "i8">; // v8i8 -> v8i16
-defm : Lengthen_Single<"4", "i32", "i16">; // v4i16 -> v4i32
-defm : Lengthen_Single<"2", "i64", "i32">; // v2i32 -> v2i64
+defm : Lengthen_Single<"8", "i16", "8">; // v8i8 -> v8i16
+defm : Lengthen_Single<"4", "i32", "16">; // v4i16 -> v4i32
+defm : Lengthen_Single<"2", "i64", "32">; // v2i32 -> v2i64
 
 defm : Lengthen_HalfSingle<"4", "i16", "i8", "8", "i16">; // v4i8 -> v4i16
-defm : Lengthen_HalfSingle<"2", "i16", "i8", "8", "i16">; // v2i8 -> v2i16
 defm : Lengthen_HalfSingle<"2", "i32", "i16", "4", "i32">; // v2i16 -> v2i32
 
 // Double lengthening - v4i8 -> v4i16 -> v4i32
@@ -5732,17 +5875,17 @@ defm : Lengthen_HalfDouble<"2", "i32", "i8", "8", "i16", "4", "i32">;
 defm : Lengthen_Double<"2", "i64", "i16", "4", "i32", "2", "i64">;
 
 // Triple lengthening - v2i8 -> v2i16 -> v2i32 -> v2i64
-def : Pat<(v2i64 (extloadvi8 addrmode6oneL32:$addr)),
+def : Pat<(v2i64 (extloadvi8 addrmode6:$addr)),
       (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-         (VLD1LNd32 addrmode6oneL32:$addr, 
+         (VLD1LNd16 addrmode6:$addr, 
                     (f64 (IMPLICIT_DEF)), (i32 0))), dsub_0)), dsub_0))>;
-def : Pat<(v2i64 (zextloadvi8 addrmode6oneL32:$addr)),
+def : Pat<(v2i64 (zextloadvi8 addrmode6:$addr)),
       (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-         (VLD1LNd32 addrmode6oneL32:$addr,
+         (VLD1LNd16 addrmode6:$addr,
                     (f64 (IMPLICIT_DEF)), (i32 0))), dsub_0)), dsub_0))>;
-def : Pat<(v2i64 (sextloadvi8 addrmode6oneL32:$addr)),
+def : Pat<(v2i64 (sextloadvi8 addrmode6:$addr)),
       (VMOVLsv2i64 (EXTRACT_SUBREG (VMOVLsv4i32 (EXTRACT_SUBREG (VMOVLsv8i16
-         (VLD1LNd32 addrmode6oneL32:$addr,
+         (VLD1LNd16 addrmode6:$addr,
                     (f64 (IMPLICIT_DEF)), (i32 0))), dsub_0)), dsub_0))>;
 
 //===----------------------------------------------------------------------===//

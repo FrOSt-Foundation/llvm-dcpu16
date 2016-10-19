@@ -98,6 +98,28 @@ namespace CallingConv {
 
     /// DCPU16_INTR - Calling convention used for DCPU16 interrupt routines.
     DCPU16_INTR = 75
+
+    /// SPIR_FUNC - Calling convention for SPIR non-kernel device functions.
+    /// No lowering or expansion of arguments.
+    /// Structures are passed as a pointer to a struct with the byval attribute.
+    /// Functions can only call SPIR_FUNC and SPIR_KERNEL functions.
+    /// Functions can only have zero or one return values.
+    /// Variable arguments are not allowed, except for printf.
+    /// How arguments/return values are lowered are not specified.
+    /// Functions are only visible to the devices.
+    SPIR_FUNC = 76,
+
+    /// SPIR_KERNEL - Calling convention for SPIR kernel functions.
+    /// Inherits the restrictions of SPIR_FUNC, except
+    /// Cannot have non-void return values.
+    /// Cannot have variable arguments.
+    /// Can also be called by the host.
+    /// Is externally visible.
+    SPIR_KERNEL = 77,
+
+    /// Intel_OCL_BI - Calling conventions for Intel OpenCL built-ins
+    Intel_OCL_BI = 78
+
   };
 } // End CallingConv namespace
 

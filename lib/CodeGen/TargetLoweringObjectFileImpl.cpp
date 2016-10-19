@@ -27,7 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/Mangler.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Support/Dwarf.h"
@@ -77,9 +77,9 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(MCStreamer &Streamer,
                                                     Flags,
                                                     SectionKind::getDataRel(),
                                                     0, Label->getName());
-  unsigned Size = TM.getTargetData()->getPointerSize();
+  unsigned Size = TM.getDataLayout()->getPointerSize();
   Streamer.SwitchSection(Sec);
-  Streamer.EmitValueToAlignment(TM.getTargetData()->getPointerABIAlignment());
+  Streamer.EmitValueToAlignment(TM.getDataLayout()->getPointerABIAlignment());
   Streamer.EmitSymbolAttribute(Label, MCSA_ELF_TypeObject);
   const MCExpr *E = MCConstantExpr::Create(Size, getContext());
   Streamer.EmitELFSize(Label, E);
@@ -93,8 +93,9 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
   // N.B.: The defaults used in here are no the same ones used in MC.
   // We follow gcc, MC follows gas. For example, given ".section .eh_frame",
   // both gas and MC will produce a section with no flags. Given
-  // section(".eh_frame") gcc will produce
-  // .section	.eh_frame,"a",@progbits
+  // section(".eh_frame") gcc will produce:
+  //
+  //   .section   .eh_frame,"a",@progbits
   if (Name.empty() || Name[0] != '.') return K;
 
   // Some lame default implementation based on some magic section names.
@@ -246,7 +247,7 @@ SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
     // FIXME: this is getting the alignment of the character, not the
     // alignment of the global!
     unsigned Align =
-      TM.getTargetData()->getPreferredAlignment(cast<GlobalVariable>(GV));
+      TM.getDataLayout()->getPreferredAlignment(cast<GlobalVariable>(GV));
 
     const char *SizeSpec = ".rodata.str1.";
     if (Kind.isMergeable2ByteCString())
@@ -521,14 +522,14 @@ SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
 
   // FIXME: Alignment check should be handled by section classifier.
   if (Kind.isMergeable1ByteCString() &&
-      TM.getTargetData()->getPreferredAlignment(cast<GlobalVariable>(GV)) < 32)
+      TM.getDataLayout()->getPreferredAlignment(cast<GlobalVariable>(GV)) < 32)
     return CStringSection;
 
   // Do not put 16-bit arrays in the UString section if they have an
   // externally visible label, this runs into issues with certain linker
   // versions.
   if (Kind.isMergeable2ByteCString() && !GV->hasExternalLinkage() &&
-      TM.getTargetData()->getPreferredAlignment(cast<GlobalVariable>(GV)) < 32)
+      TM.getDataLayout()->getPreferredAlignment(cast<GlobalVariable>(GV)) < 32)
     return UStringSection;
 
   if (Kind.isMergeableConst()) {

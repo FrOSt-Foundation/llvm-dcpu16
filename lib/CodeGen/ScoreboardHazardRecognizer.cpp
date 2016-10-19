@@ -72,10 +72,12 @@ ScoreboardHazardRecognizer(const InstrItineraryData *II,
   ReservedScoreboard.reset(ScoreboardDepth);
   RequiredScoreboard.reset(ScoreboardDepth);
 
+  // If MaxLookAhead is not set above, then we are not enabled.
   if (!isEnabled())
     DEBUG(dbgs() << "Disabled scoreboard hazard recognizer\n");
   else {
-    IssueWidth = ItinData->Props.IssueWidth;
+    // A nonempty itinerary must have a SchedModel.
+    IssueWidth = ItinData->SchedModel->IssueWidth;
     DEBUG(dbgs() << "Using scoreboard hazard recognizer: Depth = "
           << ScoreboardDepth << '\n');
   }
@@ -87,6 +89,7 @@ void ScoreboardHazardRecognizer::Reset() {
   ReservedScoreboard.reset();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScoreboardHazardRecognizer::Scoreboard::dump() const {
   dbgs() << "Scoreboard:\n";
 
@@ -102,6 +105,7 @@ void ScoreboardHazardRecognizer::Scoreboard::dump() const {
     dbgs() << '\n';
   }
 }
+#endif
 
 bool ScoreboardHazardRecognizer::atIssueLimit() const {
   if (IssueWidth == 0)

@@ -100,6 +100,9 @@ else( MSVC )
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 endif( MSVC )
 
+set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ""
+  CACHE STRING "Semicolon-separated list of experimental targets to build.")
+
 option(BUILD_SHARED_LIBS
   "Build all libraries as shared libraries instead of static" OFF)
 
@@ -111,6 +114,11 @@ endif()
 option(LLVM_ENABLE_TIMESTAMPS "Enable embedding timestamp information in build" ON)
 if(LLVM_ENABLE_TIMESTAMPS)
   set(ENABLE_TIMESTAMPS 1)
+endif()
+
+option(LLVM_ENABLE_BACKTRACES "Enable embedding backtraces on crash." ON)
+if(LLVM_ENABLE_BACKTRACES)
+  set(ENABLE_BACKTRACES 1)
 endif()
 
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
@@ -126,10 +134,15 @@ if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
 endif()
 
+set(LLVM_TARGETS_TO_BUILD
+   ${LLVM_TARGETS_TO_BUILD}
+   ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
+
 set(LLVM_ENUM_TARGETS "")
 foreach(c ${LLVM_TARGETS_TO_BUILD})
   list(FIND LLVM_ALL_TARGETS ${c} idx)
-  if( idx LESS 0 )
+  list(FIND LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${c} idy)
+  if( idx LESS 0 AND idy LESS 0 )
     message(FATAL_ERROR "The target `${c}' does not exist.
     It should be one of\n${LLVM_ALL_TARGETS}")
   else()
@@ -165,23 +178,7 @@ option(LLVM_USE_INTEL_JITEVENTS
 
 if( LLVM_USE_INTEL_JITEVENTS )
   # Verify we are on a supported platform
-  if( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "Linux" )
-    # Directory where Intel Parallel Amplifier XE 2011 is installed.
-    if ( WIN32 )
-      set(LLVM_INTEL_JITEVENTS_DIR $ENV{VTUNE_AMPLIFIER_XE_2011_DIR})
-    else ( WIN32 )
-      set(LLVM_INTEL_JITEVENTS_DIR "/opt/intel/vtune_amplifier_xe_2011")
-    endif ( WIN32 )
-
-    # Set include and library search paths for Intel JIT Events API
-    set(LLVM_INTEL_JITEVENTS_INCDIR "${LLVM_INTEL_JITEVENTS_DIR}/include")
-
-    if ( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(LLVM_INTEL_JITEVENTS_LIBDIR "${LLVM_INTEL_JITEVENTS_DIR}/lib64")
-    else ( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(LLVM_INTEL_JITEVENTS_LIBDIR "${LLVM_INTEL_JITEVENTS_DIR}/lib32")
-    endif ( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  else()
+  if( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux" )
     message(FATAL_ERROR
       "Intel JIT API support is available on Linux and Windows only.")
   endif()
@@ -242,6 +239,14 @@ option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
 # BEFORE this include, otherwise options will not be correctly set on
 # first cmake run
 include(config-ix)
+
+# By default, we target the host, but this can be overridden at CMake
+# invocation time.
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
+  "Default target for which LLVM will generate code." )
+set(TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}" CACHE STRING
+  "Default target for which LLVM will generate code." )
+
 include(HandleLLVMOptions)
 
 # Verify that we can find a Python interpreter,
@@ -403,6 +408,7 @@ add_subdirectory(utils/not)
 add_subdirectory(utils/llvm-lit)
 add_subdirectory(utils/yaml-bench)
 add_subdirectory(utils/obj2yaml)
+add_subdirectory(utils/yaml2obj)
 
 add_subdirectory(projects)
 

@@ -34,7 +34,8 @@ namespace {
 
   class MipsELFObjectWriter : public MCELFObjectTargetWriter {
   public:
-    MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI, bool _isN64);
+    MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
+                        bool _isN64, bool IsLittleEndian);
 
     virtual ~MipsELFObjectWriter();
 
@@ -53,9 +54,9 @@ namespace {
 }
 
 MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
-                                         bool _isN64)
+                                         bool _isN64, bool IsLittleEndian)
   : MCELFObjectTargetWriter(_is64Bit, OSABI, ELF::EM_MIPS,
-                            /*HasRelocationAddend*/ false,
+                            /*HasRelocationAddend*/ (_isN64) ? true : false,
                             /*IsN64*/ _isN64) {}
 
 MipsELFObjectWriter::~MipsELFObjectWriter() {}
@@ -102,6 +103,9 @@ unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
     llvm_unreachable("invalid fixup kind!");
   case FK_Data_4:
     Type = ELF::R_MIPS_32;
+    break;
+  case FK_Data_8:
+    Type = ELF::R_MIPS_64;
     break;
   case FK_GPRel_4:
     Type = ELF::R_MIPS_GPREL32;
@@ -156,6 +160,9 @@ unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
   case Mips::fixup_Mips_GOT_OFST:
     Type = ELF::R_MIPS_GOT_OFST;
     break;
+  case Mips::fixup_Mips_GOT_DISP:
+    Type = ELF::R_MIPS_GOT_DISP;
+    break;
   case Mips::fixup_Mips_GPOFF_HI:
     Type = setRType((unsigned)ELF::R_MIPS_GPREL16, Type);
     Type = setRType2((unsigned)ELF::R_MIPS_SUB, Type);
@@ -165,6 +172,24 @@ unsigned MipsELFObjectWriter::GetRelocType(const MCValue &Target,
     Type = setRType((unsigned)ELF::R_MIPS_GPREL16, Type);
     Type = setRType2((unsigned)ELF::R_MIPS_SUB, Type);
     Type = setRType3((unsigned)ELF::R_MIPS_LO16, Type);
+    break;
+  case Mips::fixup_Mips_HIGHER:
+    Type = ELF::R_MIPS_HIGHER;
+    break;
+  case Mips::fixup_Mips_HIGHEST:
+    Type = ELF::R_MIPS_HIGHEST;
+    break;
+  case Mips::fixup_Mips_GOT_HI16:
+    Type = ELF::R_MIPS_GOT_HI16;
+    break;
+  case Mips::fixup_Mips_GOT_LO16:
+    Type = ELF::R_MIPS_GOT_LO16;
+    break;
+  case Mips::fixup_Mips_CALL_HI16:
+    Type = ELF::R_MIPS_CALL_HI16;
+    break;
+  case Mips::fixup_Mips_CALL_LO16:
+    Type = ELF::R_MIPS_CALL_LO16;
     break;
   }
   return Type;
@@ -262,6 +287,7 @@ MCObjectWriter *llvm::createMipsELFObjectWriter(raw_ostream &OS,
                                                 bool IsLittleEndian,
                                                 bool Is64Bit) {
   MCELFObjectTargetWriter *MOTW = new MipsELFObjectWriter(Is64Bit, OSABI,
-                                                (Is64Bit) ? true : false);
+                                                (Is64Bit) ? true : false,
+                                                IsLittleEndian);
   return createELFObjectWriter(MOTW, OS, IsLittleEndian);
 }

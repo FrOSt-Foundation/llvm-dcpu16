@@ -24,11 +24,15 @@ kUseCloseFDs = not kIsWindows
 kAvoidDevNull = kIsWindows
 
 def executeCommand(command, cwd=None, env=None):
+    # Close extra file handles on UNIX (on Windows this cannot be done while
+    # also redirecting input).
+    close_fds = not kIsWindows
+
     p = subprocess.Popen(command, cwd=cwd,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
-                         env=env)
+                         env=env, close_fds=close_fds)
     out,err = p.communicate()
     exitCode = p.wait()
 
@@ -366,27 +370,27 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
 
     return executeCommand(command, cwd=cwd, env=test.config.environment)
 
-def isExpectedFail(xfails, xtargets, target_triple):
-    # Check if any xfail matches this target.
+def isExpectedFail(test, xfails):
+    # Check if any of the xfails match an available feature or the target.
     for item in xfails:
-        if item == '*' or item in target_triple:
-            break
-    else:
-        return False
+        # If this is the wildcard, it always fails.
+        if item == '*':
+            return True
 
-    # If so, see if it is expected to pass on this target.
-    #
-    # FIXME: Rename XTARGET to something that makes sense, like XPASS.
-    for item in xtargets:
-        if item == '*' or item in target_triple:
-            return False
+        # If this is an exact match for one of the features, it fails.
+        if item in test.config.available_features:
+            return True
 
-    return True
+        # If this is a part of the target triple, it fails.
+        if item in test.suite.config.target_triple:
+            return True
+
+    return False
 
 def parseIntegratedTestScript(test, normalize_slashes=False,
                               extra_substitutions=[]):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test
-    script and extract the lines to 'RUN' as well as 'XFAIL' and 'XTARGET'
+    script and extract the lines to 'RUN' as well as 'XFAIL' and 'REQUIRES'
     information. The RUN lines also will have variable substitution performed.
     """
 
@@ -427,7 +431,6 @@ def parseIntegratedTestScript(test, normalize_slashes=False,
     # Collect the test lines from the script.
     script = []
     xfails = []
-    xtargets = []
     requires = []
     for ln in open(sourcepath):
         if 'RUN:' in ln:
@@ -446,9 +449,6 @@ def parseIntegratedTestScript(test, normalize_slashes=False,
         elif 'XFAIL:' in ln:
             items = ln[ln.index('XFAIL:') + 6:].split(',')
             xfails.extend([s.strip() for s in items])
-        elif 'XTARGET:' in ln:
-            items = ln[ln.index('XTARGET:') + 8:].split(',')
-            xtargets.extend([s.strip() for s in items])
         elif 'REQUIRES:' in ln:
             items = ln[ln.index('REQUIRES:') + 9:].split(',')
             requires.extend([s.strip() for s in items])
@@ -487,7 +487,7 @@ def parseIntegratedTestScript(test, normalize_slashes=False,
         return (Test.UNSUPPORTED,
                 "Test requires the following features: %s" % msg)
 
-    isXFail = isExpectedFail(xfails, xtargets, test.suite.config.target_triple)
+    isXFail = isExpectedFail(test, xfails)
     return script,isXFail,tmpBase,execdir
 
 def formatTestOutput(status, out, err, exitCode, failDueToStderr, script):

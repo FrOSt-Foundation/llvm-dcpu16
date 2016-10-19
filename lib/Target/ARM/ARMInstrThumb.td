@@ -223,6 +223,7 @@ def t_addrmode_sp : Operand<i32>,
 def t_addrmode_pc : Operand<i32> {
   let EncoderMethod = "getAddrModePCOpValue";
   let DecoderMethod = "DecodeThumbAddrModePC";
+  let PrintMethod = "printThumbLdrLabelOperand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,7 +421,7 @@ let isCall = 1,
   Defs = [LR], Uses = [SP] in {
   // Also used for Thumb2
   def tBL  : TIx2<0b11110, 0b11, 1,
-                  (outs), (ins pred:$p, t_bltarget:$func, variable_ops), IIC_Br,
+                  (outs), (ins pred:$p, t_bltarget:$func), IIC_Br,
                   "bl${p}\t$func",
                   [(ARMtcall tglobaladdr:$func)]>,
              Requires<[IsThumb]> {
@@ -434,7 +435,7 @@ let isCall = 1,
 
   // ARMv5T and above, also used for Thumb2
   def tBLXi : TIx2<0b11110, 0b11, 0,
-                 (outs), (ins pred:$p, t_blxtarget:$func, variable_ops), IIC_Br,
+                 (outs), (ins pred:$p, t_blxtarget:$func), IIC_Br,
                    "blx${p}\t$func",
                    [(ARMcall tglobaladdr:$func)]>,
               Requires<[IsThumb, HasV5T]> {
@@ -448,7 +449,7 @@ let isCall = 1,
   }
 
   // Also used for Thumb2
-  def tBLXr : TI<(outs), (ins pred:$p, GPR:$func, variable_ops), IIC_Br,
+  def tBLXr : TI<(outs), (ins pred:$p, GPR:$func), IIC_Br,
                   "blx${p}\t$func",
                   [(ARMtcall GPR:$func)]>,
               Requires<[IsThumb, HasV5T]>,
@@ -459,7 +460,7 @@ let isCall = 1,
   }
 
   // ARMv4T
-  def tBX_CALL : tPseudoInst<(outs), (ins tGPR:$func, variable_ops),
+  def tBX_CALL : tPseudoInst<(outs), (ins tGPR:$func),
                   4, IIC_Br,
                   [(ARMcall_nolink tGPR:$func)]>,
             Requires<[IsThumb, IsThumb1Only]>;
@@ -506,7 +507,7 @@ let isBranch = 1, isTerminator = 1 in
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // IOS versions.
   let Uses = [SP] in {
-    def tTAILJMPr : tPseudoExpand<(outs), (ins tcGPR:$dst, variable_ops),
+    def tTAILJMPr : tPseudoExpand<(outs), (ins tcGPR:$dst),
                      4, IIC_Br, [],
                      (tBX GPR:$dst, (ops 14, zero_reg))>,
                      Requires<[IsThumb]>;
@@ -516,7 +517,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // Non-IOS version:
   let Uses = [SP] in {
     def tTAILJMPdND : tPseudoExpand<(outs),
-                   (ins t_brtarget:$dst, pred:$p, variable_ops),
+                   (ins t_brtarget:$dst, pred:$p),
                    4, IIC_Br, [],
                    (tB t_brtarget:$dst, pred:$p)>,
                  Requires<[IsThumb, IsNotIOS]>;
@@ -1200,6 +1201,7 @@ let neverHasSideEffects = 1, isReMaterializable = 1 in
 def tLEApcrel   : tPseudoInst<(outs tGPR:$Rd), (ins i32imm:$label, pred:$p),
                               2, IIC_iALUi, []>;
 
+let hasSideEffects = 1 in
 def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
                               (ins i32imm:$label, nohash_imm:$id, pred:$p),
                               2, IIC_iALUi, []>;
@@ -1244,10 +1246,6 @@ def tInt_eh_sjlj_longjmp : XI<(outs), (ins GPR:$src, GPR:$scratch),
                               Pseudo, NoItinerary, "", "",
                               [(ARMeh_sjlj_longjmp GPR:$src, GPR:$scratch)]>,
                              Requires<[IsThumb, IsIOS]>;
-
-let Defs = [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7, R12, CPSR ],
-    isBarrier = 1 in
-def tInt_eh_sjlj_dispatchsetup : PseudoInst<(outs), (ins), NoItinerary, []>;
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
