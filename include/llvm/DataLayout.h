@@ -175,7 +175,7 @@ public:
   /// in a byte. This will be respected when parsing the TargetDescription
   /// string. It has a default value of 8.
   static std::string parseSpecifier(StringRef TargetDescription,
-                                    TargetData* td = 0,
+                                    DataLayout* td = 0,
                                     unsigned BitsPerByte = 8);
 
   /// Initialize target data from properties stored in the module.
@@ -184,9 +184,6 @@ public:
   DataLayout(const DataLayout &TD) :
     ImmutablePass(ID),
     LittleEndian(TD.isLittleEndian()),
-    PointerMemSize(TD.PointerMemSize),
-    PointerABIAlign(TD.PointerABIAlign),
-    PointerPrefAlign(TD.PointerPrefAlign),
     BitsPerByte(TD.BitsPerByte),
     LegalIntWidths(TD.LegalIntWidths),
     Alignments(TD.Alignments),

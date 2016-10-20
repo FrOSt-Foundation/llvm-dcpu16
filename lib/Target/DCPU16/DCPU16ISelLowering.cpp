@@ -42,7 +42,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(DCPU16TargetMachine &tm) :
   TargetLowering(tm, new TargetLoweringObjectFileCOFF()),
   Subtarget(*tm.getSubtargetImpl()), TM(tm) {
 
-  TD = getTargetData();
+  TD = getDataLayout();
 
   // Set up the register classes.
   addRegisterClass(MVT::i16, &DCPU16::GR16RegClass);

@@ -28,8 +28,8 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/DataLayout.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -261,7 +261,7 @@ void PEI::calculateCalleeSavedRegisters(MachineFunction &Fn) {
            FixedSlot->Reg != Reg)
       ++FixedSlot;
 
-    unsigned BitsPerByte = Fn.getTarget().getTargetData()->getBitsPerByte();
+    unsigned BitsPerByte = Fn.getTarget().getDataLayout()->getBitsPerByte();
     if (FixedSlot == FixedSpillSlots + NumFixedSpillSlots) {
       // Nope, just spill it anywhere convenient.
       unsigned Align = RC->getAlignment() / BitsPerByte;

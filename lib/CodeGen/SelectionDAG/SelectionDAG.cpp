@@ -1536,7 +1536,7 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
 /// specified value type.
 SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
   MachineFrameInfo *FrameInfo = getMachineFunction().getFrameInfo();
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   unsigned ByteSize = VT.getStoreSize(BitsPerByte);
   Type *Ty = VT.getTypeForEVT(*getContext());
   unsigned StackAlign =
@@ -1549,13 +1549,12 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
 /// CreateStackTemporary - Create a stack temporary suitable for holding
 /// either of the specified value types.
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
-  const TargetData *TD = TLI.getTargetData();
+  const DataLayout *TD = TLI.getDataLayout();
   unsigned BitsPerByte = TD->getBitsPerByte();
   unsigned Bytes = std::max(VT1.getStoreSize(BitsPerByte),
                             VT2.getStoreSize(BitsPerByte));
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
-  const DataLayout *TD = TLI.getDataLayout();
   unsigned Align = std::max(TD->getPrefTypeAlignment(Ty1),
                             TD->getPrefTypeAlignment(Ty2));
 
@@ -3373,7 +3372,7 @@ static SDValue getMemsetStringVal(EVT VT, DebugLoc dl, SelectionDAG &DAG,
   }
 
   assert(!VT.isVector() && "Can't handle vector type here!");
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   unsigned NumVTBytes = VT.getSizeInBits() / BitsPerByte;
   unsigned NumBytes = std::min(NumVTBytes, unsigned(Str.size()));
 
@@ -3465,14 +3464,14 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
 
   unsigned NumMemOps = 0;
   while (Size != 0) {
-    unsigned VTSize = VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+    unsigned VTSize = VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
     while (VTSize > Size) {
       // For now, only use non-vector load / store's for the left-over pieces.
       if (VT.isVector() || VT.isFloatingPoint()) {
         VT = MVT::i64;
         while (!TLI.isTypeLegal(VT))
           VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
-        VTSize = VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+        VTSize = VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
       } else {
         // This can result in a type that is not legal on the target, e.g.
         // 1 or 2 bytes on PPC.
@@ -3546,7 +3545,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, DebugLoc dl,
   uint64_t SrcOff = 0, DstOff = 0;
   for (unsigned i = 0; i != NumMemOps; ++i) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+    unsigned VTSize = VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
     SDValue Value, Store;
 
     if (CopyFromStr &&
@@ -3638,7 +3637,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, DebugLoc dl,
   unsigned NumMemOps = MemOps.size();
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+    unsigned VTSize = VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
     SDValue Value, Store;
 
     Value = DAG.getLoad(VT, dl, Chain,
@@ -3654,7 +3653,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, DebugLoc dl,
   OutChains.clear();
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
-    unsigned VTSize = VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+    unsigned VTSize = VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
     SDValue Value, Store;
 
     Store = DAG.getStore(Chain, dl, LoadValues[i],
@@ -3737,7 +3736,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, DebugLoc dl,
                                  DstPtrInfo.getWithOffset(DstOff),
                                  isVol, false, Align);
     OutChains.push_back(Store);
-    DstOff += VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte();
+    DstOff += VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte();
   }
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
@@ -3950,7 +3949,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, DebugLoc dl, EVT MemVT,
   if (Opcode != ISD::ATOMIC_LOAD)
     Flags |= MachineMemOperand::MOStore;
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(BitsPerByte), Alignment);
 
@@ -4011,7 +4010,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, DebugLoc dl, EVT MemVT,
   if (Opcode != ISD::ATOMIC_LOAD)
     Flags |= MachineMemOperand::MOStore;
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(MachinePointerInfo(PtrVal), Flags,
                             MemVT.getStoreSize(BitsPerByte), Alignment);
@@ -4085,7 +4084,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, DebugLoc dl, EVT MemVT,
   if (Opcode != ISD::ATOMIC_LOAD)
     Flags |= MachineMemOperand::MOStore;
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(MachinePointerInfo(PtrVal), Flags,
                             MemVT.getStoreSize(BitsPerByte), Alignment);
@@ -4163,7 +4162,7 @@ SelectionDAG::getMemIntrinsicNode(unsigned Opcode, DebugLoc dl, SDVTList VTList,
     Flags |= MachineMemOperand::MOLoad;
   if (Vol)
     Flags |= MachineMemOperand::MOVolatile;
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(BitsPerByte), Align);
 
@@ -4266,7 +4265,7 @@ SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   if (PtrInfo.V == 0)
     PtrInfo = InferPointerInfo(Ptr, Offset);
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(BitsPerByte), Alignment,
@@ -4377,7 +4376,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, DebugLoc dl, SDValue Val,
   if (PtrInfo.V == 0)
     PtrInfo = InferPointerInfo(Ptr);
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags,
@@ -4432,7 +4431,7 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, DebugLoc dl, SDValue Val,
   if (PtrInfo.V == 0)
     PtrInfo = InferPointerInfo(Ptr);
 
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, SVT.getStoreSize(BitsPerByte), Alignment,
@@ -6057,7 +6056,7 @@ bool SelectionDAG::isConsecutiveLoad(LoadSDNode *LD, LoadSDNode *Base,
   if (LD->getChain() != Base->getChain())
     return false;
   EVT VT = LD->getValueType(0);
-  if (VT.getSizeInBits() / TLI.getTargetData()->getBitsPerByte() != Bytes)
+  if (VT.getSizeInBits() / TLI.getDataLayout()->getBitsPerByte() != Bytes)
     return false;
 
   SDValue Loc = LD->getOperand(1);

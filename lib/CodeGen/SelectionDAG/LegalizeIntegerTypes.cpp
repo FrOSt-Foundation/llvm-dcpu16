@@ -22,7 +22,7 @@
 #include "llvm/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/DataLayout.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -1800,7 +1800,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
   bool isNonTemporal = N->isNonTemporal();
   bool isInvariant = N->isInvariant();
   DebugLoc dl = N->getDebugLoc();
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
@@ -2291,7 +2291,7 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   Type *RetTy = VT.getTypeForEVT(*DAG.getContext());
   EVT PtrVT = TLI.getPointerTy();
   Type *PtrTy = PtrVT.getTypeForEVT(*DAG.getContext());
-  
+
   // Replace this with a libcall that will check overflow.
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   if (VT == MVT::i32)
@@ -2711,7 +2711,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
     EVT NEVT = EVT::getIntegerVT(*DAG.getContext(), ExcessBits);
 
     // Increment the pointer to the other half.
-    unsigned IncrementSize = NVT.getSizeInBits()/TLI.getTargetData()->getBitsPerByte();
+    unsigned IncrementSize = NVT.getSizeInBits()/TLI.getDataLayout()->getBitsPerByte();
     Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
                       DAG.getIntPtrConstant(IncrementSize));
     Hi = DAG.getTruncStore(Ch, dl, Hi, Ptr,
@@ -2726,7 +2726,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
   GetExpandedInteger(N->getValue(), Lo, Hi);
 
   EVT ExtVT = N->getMemoryVT();
-  unsigned BitsPerByte = TLI.getTargetData()->getBitsPerByte();
+  unsigned BitsPerByte = TLI.getDataLayout()->getBitsPerByte();
   unsigned EBytes = ExtVT.getStoreSize(BitsPerByte);
   unsigned IncrementSize = NVT.getSizeInBits()/BitsPerByte;
   unsigned ExcessBits = (EBytes - IncrementSize)*BitsPerByte;

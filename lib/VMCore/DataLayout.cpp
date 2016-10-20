@@ -166,9 +166,6 @@ void DataLayout::init() {
   LayoutMap = 0;
   LittleEndian = false;
   BitsPerByte = 8;
-  PointerMemSize = 8;
-  PointerABIAlign = 8;
-  PointerPrefAlign = PointerABIAlign;
   StackNaturalAlign = 0;
 
   // Default alignments
@@ -187,7 +184,7 @@ void DataLayout::init() {
   setPointerAlignment(0, 8, 8, 8);
 }
 
-std::string TargetData::parseSpecifier(StringRef Desc, TargetData *td, unsigned BitsPerByte) {
+std::string DataLayout::parseSpecifier(StringRef Desc, DataLayout *td, unsigned BitsPerByte) {
 
   if (td)
     td->init();
@@ -232,8 +229,6 @@ std::string TargetData::parseSpecifier(StringRef Desc, TargetData *td, unsigned 
       int PointerMemSizeBits = getInt(Split.first);
       if (PointerMemSizeBits < 0 || PointerMemSizeBits % BitsPerByte != 0)
         return "invalid pointer size, must be a positive multiple of the byte width";
-      if (td)
-        td->PointerMemSize = PointerMemSizeBits / BitsPerByte;
 
       // Pointer ABI alignment.
       Split = Split.second.split(':');
@@ -242,8 +237,6 @@ std::string TargetData::parseSpecifier(StringRef Desc, TargetData *td, unsigned 
         return "invalid pointer ABI alignment, "
                "must be a positive multiple of the byte width";
       }
-      if (td)
-        td->PointerABIAlign = PointerABIAlignBits / BitsPerByte;
 
       // Pointer preferred alignment.
       Split = Split.second.split(':');
@@ -252,13 +245,11 @@ std::string TargetData::parseSpecifier(StringRef Desc, TargetData *td, unsigned 
         return "invalid pointer preferred alignment, "
                "must be a positive multiple of the byte width";
       }
-      if (td) {
-        td->PointerPrefAlign = PointerPrefAlignBits / BitsPerByte;
-        if (td->PointerPrefAlign == 0)
-          td->PointerPrefAlign = td->PointerABIAlign;
-        td->setPointerAlignment(AddrSpace, PointerABIAlignBits / BitesPerByte,
-                PointerPrefAlignBits / BitsPerByte, PointerMemSizeBits / 8);
-      }
+      PointerPrefAlignBits = PointerPrefAlignBits / BitsPerByte;
+      if (PointerPrefAlignBits == 0)
+        PointerPrefAlignBits = PointerABIAlignBits;
+      td->setPointerAlignment(AddrSpace, PointerABIAlignBits / BitsPerByte,
+              PointerPrefAlignBits, PointerMemSizeBits / 8);
       break;
     }
     case 'i':

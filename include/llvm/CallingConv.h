@@ -97,7 +97,7 @@ namespace CallingConv {
     MBLAZE_SVOL = 74,
 
     /// DCPU16_INTR - Calling convention used for DCPU16 interrupt routines.
-    DCPU16_INTR = 75
+    DCPU16_INTR = 75,
 
     /// SPIR_FUNC - Calling convention for SPIR non-kernel device functions.
     /// No lowering or expansion of arguments.

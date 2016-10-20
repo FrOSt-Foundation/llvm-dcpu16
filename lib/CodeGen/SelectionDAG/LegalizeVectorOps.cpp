@@ -28,7 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/DataLayout.h"
 #include "llvm/Target/TargetLowering.h"
 using namespace llvm;
 
@@ -361,7 +361,7 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
   SmallVector<SDValue, 8> LoadVals;
   SmallVector<SDValue, 8> LoadChains;
   unsigned NumElem = SrcVT.getVectorNumElements();
-  unsigned Stride = SrcVT.getScalarType().getSizeInBits()/TLI.getTargetData()->getBitsPerByte();
+  unsigned Stride = SrcVT.getScalarType().getSizeInBits()/TLI.getDataLayout()->getBitsPerByte();
 
   for (unsigned Idx=0; Idx<NumElem; Idx++) {
     SDValue ScalarLoad = DAG.getExtLoad(ExtType, dl,
@@ -416,7 +416,7 @@ SDValue VectorLegalizer::ExpandStore(SDValue Op) {
     ScalarSize = NextPowerOf2(ScalarSize);
 
   // Store Stride in bytes
-  unsigned Stride = ScalarSize/TLI.getTargetData()->getBitsPerByte();
+  unsigned Stride = ScalarSize/TLI.getDataLayout()->getBitsPerByte();
   // Extract each of the elements from the original vector
   // and save them into memory individually.
   SmallVector<SDValue, 8> Stores;
@@ -443,7 +443,7 @@ SDValue VectorLegalizer::ExpandStore(SDValue Op) {
 SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
   // Lower a select instruction where the condition is a scalar and the
   // operands are vectors. Lower this select to VSELECT and implement it
-  // using XOR AND OR. The selector bit is broadcasted. 
+  // using XOR AND OR. The selector bit is broadcasted.
   EVT VT = Op.getValueType();
   DebugLoc DL = Op.getDebugLoc();
 

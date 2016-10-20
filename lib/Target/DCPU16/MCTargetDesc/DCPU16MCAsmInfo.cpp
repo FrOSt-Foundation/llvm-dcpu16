@@ -36,7 +36,7 @@ DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Target &T, StringRef TT) {
   HasDotTypeDotSizeDirective = false;
 
   // Use .lcomm instead of .local .comm (required for binutils support)
-  LCOMMDirectiveType = LCOMM::NoAlignment;
+  LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
   Data8bitsDirective = "\t.dat\t";
   Data16bitsDirective = "\t.dat\t";
