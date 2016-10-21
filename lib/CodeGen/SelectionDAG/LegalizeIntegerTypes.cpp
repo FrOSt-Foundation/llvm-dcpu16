@@ -1090,6 +1090,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 #ifndef NDEBUG
     dbgs() << "ExpandIntegerResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
+    dbgs() << N->isMachineOpcode() << "\n";
+    dbgs() << N->getOpcode() << "\n";
 #endif
     llvm_unreachable("Do not know how to expand the result of this operator!");
 
