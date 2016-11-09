@@ -66,6 +66,7 @@ public:
     nvptx64, // NVPTX: 64-bit
     le32,    // le32: generic little-endian 32-bit CPU (PNaCl / Emscripten)
     amdil,   // amdil: amd IL
+    dcpu16,  // DCPU16 architecture
     spir,    // SPIR: standard portable IR for OpenCL 32-bit version
     spir64   // SPIR: standard portable IR for OpenCL 64-bit version
   };

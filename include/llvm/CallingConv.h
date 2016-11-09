@@ -115,8 +115,9 @@ namespace CallingConv {
     SPIR_KERNEL = 76,
 
     /// Intel_OCL_BI - Calling conventions for Intel OpenCL built-ins
-    Intel_OCL_BI = 77
+    Intel_OCL_BI = 77,
 
+    DCPU16_INTR = 78,
   };
 } // End CallingConv namespace
 
