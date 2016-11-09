@@ -96,7 +96,7 @@ public:
 
   /// IsLegalToFold - Returns true if the specific operand node N of
   /// U can be folded during instruction selection that starts at Root.
-  /// FIXME: This is a static member function because the MSP430/X86
+  /// FIXME: This is a static member function because the MSP430/X86/DCPU16
   /// targets, which uses it during isel.  This could become a proper member.
   static bool IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
                             CodeGenOpt::Level OptLevel,
