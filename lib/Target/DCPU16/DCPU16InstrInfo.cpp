@@ -15,7 +15,7 @@
 #include "DCPU16.h"
 #include "DCPU16MachineFunctionInfo.h"
 #include "DCPU16TargetMachine.h"
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

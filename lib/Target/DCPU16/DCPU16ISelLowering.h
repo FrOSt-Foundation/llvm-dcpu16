@@ -133,7 +133,7 @@ namespace llvm {
 
     const DCPU16Subtarget &Subtarget;
     const DCPU16TargetMachine &TM;
-    const TargetData *TD;
+    const DataLayout *DL;
   };
 } // namespace llvm
 

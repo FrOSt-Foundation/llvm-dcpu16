@@ -17,7 +17,7 @@
 #include "DCPU16.h"
 #include "DCPU16MachineFunctionInfo.h"
 #include "DCPU16TargetMachine.h"
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -152,7 +152,8 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
 
 void
 DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                        int SPAdj, RegScavenger *RS) const {
+                                        int SPAdj, unsigned int FIOperandNum, RegScavenger *RS) const {
+    //TODO: FIOperandNum not integrated
   assert(SPAdj == 0 && "Unexpected");
 
   unsigned i = 0;

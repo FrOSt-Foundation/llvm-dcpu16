@@ -18,12 +18,12 @@
 #include "DCPU16MachineFunctionInfo.h"
 #include "DCPU16TargetMachine.h"
 #include "DCPU16Subtarget.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Function.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/CallingConv.h"
-#include "llvm/GlobalVariable.h"
-#include "llvm/GlobalAlias.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -41,8 +41,6 @@ using namespace llvm;
 DCPU16TargetLowering::DCPU16TargetLowering(DCPU16TargetMachine &tm) :
   TargetLowering(tm, new TargetLoweringObjectFileCOFF()),
   Subtarget(*tm.getSubtargetImpl()), TM(tm) {
-
-  TD = getTargetData();
 
   // Set up the register classes.
   addRegisterClass(MVT::i16, &DCPU16::GR16RegClass);
@@ -341,10 +339,10 @@ DCPU16TargetLowering::LowerReturn(SDValue Chain,
 
   // If this is the first return lowered for this function, add the regs to the
   // liveout set for the function.
-  if (DAG.getMachineFunction().getRegInfo().liveout_empty()) {
+  if (DAG.getMachineFunction().getRegInfo().livein_empty()) {
     for (unsigned i = 0; i != RVLocs.size(); ++i)
       if (RVLocs[i].isRegLoc())
-        DAG.getMachineFunction().getRegInfo().addLiveOut(RVLocs[i].getLocReg());
+        DAG.getMachineFunction().getRegInfo().addLiveIn(RVLocs[i].getLocReg());
   }
 
   SDValue Flag;
@@ -716,7 +714,7 @@ SDValue DCPU16TargetLowering::LowerRETURNADDR(SDValue Op,
   if (Depth > 0) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset =
-      DAG.getConstant(TD->getPointerSize(), MVT::i16);
+      DAG.getConstant(getDataLayout()->getPointerSize(), MVT::i16);
     return DAG.getLoad(getPointerTy(), dl, DAG.getEntryNode(),
                        DAG.getNode(ISD::ADD, dl, getPointerTy(),
                                    FrameAddr, Offset),

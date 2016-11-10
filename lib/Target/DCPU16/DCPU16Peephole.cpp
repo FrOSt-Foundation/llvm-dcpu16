@@ -14,7 +14,7 @@
 #include "DCPU16.h"
 #include "DCPU16TargetMachine.h"
 #include "DCPU16InstrInfo.h"
-#include "llvm/Constants.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/PassSupport.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"

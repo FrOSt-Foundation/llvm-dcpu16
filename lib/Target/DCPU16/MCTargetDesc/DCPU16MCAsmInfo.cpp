@@ -18,8 +18,6 @@ using namespace llvm;
 void DCPU16MCAsmInfo::anchor() { }
 
 DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Target &T, StringRef TT) {
-  LabelPrefix = ":";
-  LabelSuffix = "";
   PointerSize = 2;
 
   PrivateGlobalPrefix = ".L";
@@ -36,5 +34,5 @@ DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Target &T, StringRef TT) {
   HasDotTypeDotSizeDirective = false;
 
   // Use .lcomm instead of .local .comm (required for binutils support)
-  LCOMMDirectiveType = LCOMM::NoAlignment;
+  LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 }

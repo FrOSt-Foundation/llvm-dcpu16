@@ -21,7 +21,7 @@
 #include "DCPU16SelectionDAGInfo.h"
 #include "DCPU16RegisterInfo.h"
 #include "DCPU16Subtarget.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -31,7 +31,7 @@ namespace llvm {
 ///
 class DCPU16TargetMachine : public LLVMTargetMachine {
   DCPU16Subtarget        Subtarget;
-  const TargetData       DataLayout;       // Calculates type size & alignment
+  const DataLayout       DL;       // Calculates type size & alignment
   DCPU16InstrInfo        InstrInfo;
   DCPU16TargetLowering   TLInfo;
   DCPU16SelectionDAGInfo TSInfo;
@@ -47,7 +47,7 @@ public:
     return &FrameLowering;
   }
   virtual const DCPU16InstrInfo *getInstrInfo() const  { return &InstrInfo; }
-  virtual const TargetData *getTargetData() const     { return &DataLayout;}
+  virtual const DataLayout *getTargetData() const     { return &DL;}
   virtual const DCPU16Subtarget *getSubtargetImpl() const { return &Subtarget; }
 
   virtual const TargetRegisterInfo *getRegisterInfo() const {

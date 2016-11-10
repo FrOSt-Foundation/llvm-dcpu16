@@ -21,37 +21,37 @@
 
 namespace llvm {
 
-class TargetInstrInfo;
-class DCPU16TargetMachine;
+    class TargetInstrInfo;
+    class DCPU16TargetMachine;
 
-struct DCPU16RegisterInfo : public DCPU16GenRegisterInfo {
-private:
-  DCPU16TargetMachine &TM;
-  const TargetInstrInfo &TII;
+    struct DCPU16RegisterInfo : public DCPU16GenRegisterInfo {
+        private:
+            DCPU16TargetMachine &TM;
+            const TargetInstrInfo &TII;
 
-  /// StackAlign - Default stack alignment.
-  ///
-  unsigned StackAlign;
-public:
-  DCPU16RegisterInfo(DCPU16TargetMachine &tm, const TargetInstrInfo &tii);
+            /// StackAlign - Default stack alignment.
+            ///
+            unsigned StackAlign;
+        public:
+            DCPU16RegisterInfo(DCPU16TargetMachine &tm, const TargetInstrInfo &tii);
 
-  /// Code Generation virtual methods...
-  const uint16_t *getCalleeSavedRegs(const MachineFunction *MF = 0) const;
-  const uint32_t *getCallPreservedMask(CallingConv::ID) const;
+            /// Code Generation virtual methods...
+            const uint16_t *getCalleeSavedRegs(const MachineFunction *MF = 0) const;
+            const uint32_t *getCallPreservedMask(CallingConv::ID) const;
 
-  BitVector getReservedRegs(const MachineFunction &MF) const;
-  const TargetRegisterClass* getPointerRegClass(const MachineFunction &MF,
-                                                unsigned Kind = 0) const;
+            BitVector getReservedRegs(const MachineFunction &MF) const;
+            const TargetRegisterClass* getPointerRegClass(const MachineFunction &MF,
+                    unsigned Kind = 0) const;
 
-  void eliminateCallFramePseudoInstr(MachineFunction &MF,
-                                     MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator I) const;
+            void eliminateCallFramePseudoInstr(MachineFunction &MF,
+                    MachineBasicBlock &MBB,
+                    MachineBasicBlock::iterator I) const;
 
-  void eliminateFrameIndex(MachineBasicBlock::iterator II,
-                           int SPAdj, RegScavenger *RS = NULL) const;
+            void eliminateFrameIndex(MachineBasicBlock::iterator II,
+                    int SPAdj, unsigned int FIOperandNum, RegScavenger *RS = NULL) const;
 
-  // Debug information queries.
-  unsigned getFrameRegister(const MachineFunction &MF) const;
+            // Debug information queries.
+            unsigned getFrameRegister(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm
