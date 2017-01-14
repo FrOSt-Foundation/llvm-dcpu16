@@ -22,7 +22,7 @@ DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Target &T, StringRef TT) {
   LabelSuffix = "";
   PointerSize = 2;
 
-  PrivateGlobalPrefix = "_L"; // There might be some incompatibility with sublabels and stuff
+  PrivateGlobalPrefix = ".L"; // There might be some incompatibility with sublabels and stuff
   WeakRefDirective ="\t.weak\t";
   PCSymbol=".";
   CommentString = ";";
