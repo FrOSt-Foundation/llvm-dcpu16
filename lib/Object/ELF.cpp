@@ -132,13 +132,6 @@ StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type) {
       break;
     }
     break;
-  case ELF::EM_DCPU16:
-    switch (Type) {
-#include "llvm/Support/ELFRelocs/DCPU16.def"
-    default:
-        break;
-    }
-    break;
   default:
     break;
   }

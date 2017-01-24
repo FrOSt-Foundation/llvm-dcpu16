@@ -1030,7 +1030,7 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;
 
   case ELF::EM_DCPU16:
-    return IsLIttleEndian ? Triple::dcpu16e1 : Triple::dcpu16;
+    return Triple::dcpu16;
 
   default:
     return Triple::UnknownArch;
