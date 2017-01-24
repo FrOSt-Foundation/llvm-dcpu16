@@ -53,6 +53,7 @@ public:
     avr,            // AVR: Atmel AVR microcontroller
     bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
     bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
+    dcpu16,         // DCPU16 : techcompliant's virtual cpu
     hexagon,        // Hexagon: hexagon
     mips,           // MIPS: mips, mipsallegrex
     mipsel,         // MIPSEL: mipsel, mipsallegrexel

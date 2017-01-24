@@ -69,6 +69,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case wasm64:         return "wasm64";
   case renderscript32: return "renderscript32";
   case renderscript64: return "renderscript64";
+  case dcpu16:         return "dcpu16";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -140,6 +141,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case riscv32:
   case riscv64:     return "riscv";
+
   }
 }
 
@@ -256,6 +258,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("armeb", armeb)
     .Case("avr", avr)
     .StartsWith("bpf", BPFArch)
+    .Case("dcpu16", dcpu16)
     .Case("mips", mips)
     .Case("mipsel", mipsel)
     .Case("mips64", mips64)
@@ -412,6 +415,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("wasm64", Triple::wasm64)
     .Case("renderscript32", Triple::renderscript32)
     .Case("renderscript64", Triple::renderscript64)
+    .Case("dcpu16", Triple::dcpu16)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -646,6 +650,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc64:
     if (T.isOSDarwin())
       return Triple::MachO;
+    return Triple::ELF;
+  case Triple::dcpu16:
     return Triple::ELF;
   }
   llvm_unreachable("unknown architecture");
@@ -1144,6 +1150,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::avr:
   case llvm::Triple::msp430:
+  case llvm::Triple::dcpu16:
     return 16;
 
   case llvm::Triple::arm:
@@ -1222,6 +1229,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::msp430:
   case Triple::systemz:
   case Triple::ppc64le:
+  case Triple::dcpu16:
     T.setArch(UnknownArch);
     break;
 
@@ -1288,6 +1296,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::xcore:
   case Triple::sparcel:
   case Triple::shave:
+  case Triple::dcpu16:
     T.setArch(UnknownArch);
     break;
 
