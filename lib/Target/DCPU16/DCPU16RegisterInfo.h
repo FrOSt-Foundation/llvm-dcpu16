@@ -50,6 +50,8 @@ public:
   void eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, RegScavenger *RS = NULL) const;
 
+  virtual void eliminateFrameIndex(llvm::MachineBasicBlock::iterator, int, unsigned int, llvm::RegScavenger*) const {}
+
   // Debug information queries.
   unsigned getFrameRegister(const MachineFunction &MF) const;
 };

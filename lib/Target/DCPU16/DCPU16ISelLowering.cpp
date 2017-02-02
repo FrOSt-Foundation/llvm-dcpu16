@@ -18,12 +18,12 @@
 #include "DCPU16MachineFunctionInfo.h"
 #include "DCPU16TargetMachine.h"
 #include "DCPU16Subtarget.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Function.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/CallingConv.h"
-#include "llvm/GlobalVariable.h"
-#include "llvm/GlobalAlias.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -39,7 +39,7 @@
 using namespace llvm;
 
 DCPU16TargetLowering::DCPU16TargetLowering(DCPU16TargetMachine &tm) :
-  TargetLowering(tm, new TargetLoweringObjectFileCOFF()),
+  TargetLowering(tm),
   Subtarget(*tm.getSubtargetImpl()), TM(tm) {
 
   TD = getDataLayout();
@@ -772,7 +772,6 @@ SDValue DCPU16TargetLowering::LowerMUL_LOHI(SDValue Op,
                                             bool Signed) const {
   SDValue Chain = DAG.getEntryNode();
   EVT VT = Op.getValueType();
-  DebugLoc dl = Op.getDebugLoc();
 
   SDValue LHS    = Op.getOperand(0);
   SDValue RHS    = Op.getOperand(1);
@@ -780,20 +779,19 @@ SDValue DCPU16TargetLowering::LowerMUL_LOHI(SDValue Op,
   SDVTList VTs = DAG.getVTList(VT, MVT::Other, MVT::Glue);
   SDValue Ops[] = {Chain, LHS, RHS};
   SDValue Lo = DAG.getNode(Signed ? DCPU16ISD::SMUL : DCPU16ISD::UMUL,
-                           dl, VTs, Ops, array_lengthof(Ops));
-  SDValue Hi = DAG.getCopyFromReg(Lo.getValue(1), dl, DCPU16::EX, VT, Lo.getValue(2));
+                           Op, VTs, Ops, array_lengthof(Ops));
+  SDValue Hi = DAG.getCopyFromReg(Lo.getValue(1), Op, DCPU16::EX, VT, Lo.getValue(2));
 
   SDValue Ops2[] = {Lo, Hi};
-  return DAG.getMergeValues(Ops2, 2, dl);
+  return DAG.getMergeValues(Ops2, Op);
 }
 
 SDValue DCPU16TargetLowering::LowerJumpTable(SDValue Op,
                                              SelectionDAG &DAG) const {
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
-  DebugLoc dl = Op.getDebugLoc();
 
   SDValue TJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i16);
-  return DAG.getNode(DCPU16ISD::Wrapper, dl, MVT::i16, TJT);
+  return DAG.getNode(DCPU16ISD::Wrapper, Op, MVT::i16, TJT);
 }
 
 const char *DCPU16TargetLowering::getTargetNodeName(unsigned Opcode) const {

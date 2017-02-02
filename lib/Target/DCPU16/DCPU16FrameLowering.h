@@ -48,6 +48,8 @@ public:
   bool hasReservedCallFrame(const MachineFunction &MF) const;
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF) const;
+
+  virtual void emitPrologue(llvm::MachineFunction&, llvm::MachineBasicBlock&) const {}
 };
 
 } // End llvm namespace

@@ -56,9 +56,9 @@ public:
     return &TLInfo;
   }
 
-  virtual const DCPU16SelectionDAGInfo* getSelectionDAGInfo() const {
-    return &TSInfo;
-  }
+  //virtual const DCPU16SelectionDAGInfo* getSelectionDAGInfo() const {
+  //  return &TSInfo;
+  //}
 
   virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
 }; // DCPU16TargetMachine.

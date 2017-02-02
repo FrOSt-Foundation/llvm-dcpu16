@@ -92,14 +92,16 @@ namespace {
   class DCPU16DAGToDAGISel : public SelectionDAGISel {
     const DCPU16TargetLowering &Lowering;
     const DCPU16Subtarget &Subtarget;
+    const DataLayout &dataLayout;
 
   public:
     DCPU16DAGToDAGISel(DCPU16TargetMachine &TM, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(TM, OptLevel),
         Lowering(*TM.getTargetLowering()),
-        Subtarget(*TM.getSubtargetImpl()) { }
+        Subtarget(*TM.getSubtargetImpl()),
+        dataLayout(*TM.getDataLayout()) { }
 
-    virtual const char *getPassName() const {
+    virtual StringRef getPassName() const {
       return "DCPU16 DAG->DAG Pattern Instruction Selection";
     }
 
@@ -115,7 +117,7 @@ namespace {
   #include "DCPU16GenDAGISel.inc"
 
   private:
-    SDNode *Select(SDNode *N);
+    void Select(SDNode *N);
 
     bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Disp);
   };
@@ -256,12 +258,12 @@ bool DCPU16DAGToDAGISel::SelectAddr(SDValue N,
   }
 
   Base  = (AM.BaseType == DCPU16ISelAddressMode::FrameIndexBase) ?
-    CurDAG->getTargetFrameIndex(AM.Base.FrameIndex, TLI.getPointerTy()) :
+    CurDAG->getTargetFrameIndex(AM.Base.FrameIndex, TLI->getPointerTy(dataLayout)) :
     AM.Base.Reg;
 
   if (AM.GV)
-    Disp = CurDAG->getTargetGlobalAddress(AM.GV, N->getDebugLoc(),
-                                          MVT::i16, AM.Disp,
+    Disp = CurDAG->getTargetGlobalAddress(AM.GV, N,
+                                          VT, AM.Disp,
                                           0/*AM.SymbolFlags*/);
   else if (AM.CP)
     Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i16,
@@ -274,7 +276,7 @@ bool DCPU16DAGToDAGISel::SelectAddr(SDValue N,
     Disp = CurDAG->getBlockAddress(AM.BlockAddr, MVT::i32,
                                    true, 0/*AM.SymbolFlags*/);
   else
-    Disp = CurDAG->getTargetConstant(AM.Disp, MVT::i16);
+    Disp = CurDAG->getTargetConstant(AM.Disp, N, VT);
 
   return true;
 }
@@ -296,7 +298,8 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, char ConstraintCode,
   return false;
 }
 
-SDNode *DCPU16DAGToDAGISel::Select(SDNode *Node) {
+//TODO : rewrite that function so it actually does what it should do
+void DCPU16DAGToDAGISel::Select(SDNode *Node) {
   DebugLoc dl = Node->getDebugLoc();
 
   // Dump information about the Node being selected
@@ -309,7 +312,8 @@ SDNode *DCPU16DAGToDAGISel::Select(SDNode *Node) {
     DEBUG(errs() << "== ";
           Node->dump(CurDAG);
           errs() << "\n");
-    return NULL;
+    //return NULL;
+    return;
   }
 
   // Few custom selection stuff.
@@ -317,13 +321,13 @@ SDNode *DCPU16DAGToDAGISel::Select(SDNode *Node) {
   default: break;
   case ISD::FrameIndex: {
     assert(Node->getValueType(0) == MVT::i16);
-    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i16);
-    if (Node->hasOneUse())
-      return CurDAG->SelectNodeTo(Node, DCPU16::ADD16ri, MVT::i16,
-                                  TFI, CurDAG->getTargetConstant(0, MVT::i16));
-    return CurDAG->getMachineNode(DCPU16::ADD16ri, dl, MVT::i16,
-                                  TFI, CurDAG->getTargetConstant(0, MVT::i16));
+    //int FI = cast<FrameIndexSDNode>(Node)->getIndex();
+    //SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i16);
+    //if (Node->hasOneUse())
+    //  return CurDAG->SelectNodeTo(Node, DCPU16::ADD16ri, MVT::i16,
+    //                              TFI, CurDAG->getTargetConstant(0, MVT::i16));
+    //return CurDAG->getMachineNode(DCPU16::ADD16ri, dl, MVT::i16,
+    //                              TFI, CurDAG->getTargetConstant(0, MVT::i16));
   }
   }
 
@@ -337,5 +341,5 @@ SDNode *DCPU16DAGToDAGISel::Select(SDNode *Node) {
     DEBUG(ResNode->dump(CurDAG));
   DEBUG(errs() << "\n");
 
-  return ResNode;
+  //return ResNode;
 }
