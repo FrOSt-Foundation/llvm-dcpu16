@@ -1,4 +1,4 @@
-//===-- DCPU16MCTargetDesc.h - DCPU16 Target Descriptions -------*- C++ -*-===//
+//===-- DCPU16MCTargetDesc.h - DCPU16 Target Descriptions -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,18 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DCPU16MCTARGETDESC_H
-#define DCPU16MCTARGETDESC_H
+#ifndef LLVM_LIB_TARGET_DCPU16_MCTARGETDESC_DCPU16MCTARGETDESC_H
+#define LLVM_LIB_TARGET_DCPU16_MCTARGETDESC_DCPU16MCTARGETDESC_H
+
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 class Target;
+class Triple;
 
-extern Target TheDCPU16Target;
+Target &getTheDCPU16Target();
 
 } // End llvm namespace
 
-// Defines symbolic names for DCPU16 registers.
-// This defines a mapping from register name to register number.
+// Defines symbolic names for DCPU16 registers.  This defines a mapping from
+// register name to register number.
 #define GET_REGINFO_ENUM
 #include "DCPU16GenRegisterInfo.inc"
 

@@ -16,17 +16,17 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = InstPrinter MCTargetDesc TargetInfo
+subdirectories = MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
 name = DCPU16
 parent = Target
-has_asmprinter = 1
+has_asmprinter = 0
 
 [component_1]
 type = Library
 name = DCPU16CodeGen
 parent = DCPU16
-required_libraries = AsmPrinter CodeGen Core MC DCPU16AsmPrinter DCPU16Desc DCPU16Info SelectionDAG Support Target
+required_libraries = AsmPrinter CodeGen Core MC DCPU16Desc DCPU16Info SelectionDAG Support Target
 add_to_library_groups = DCPU16

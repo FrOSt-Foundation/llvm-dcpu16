@@ -50,10 +50,11 @@ include "DCPU16InstrInfo.td"
 
 def DCPU16InstrInfo : InstrInfo;
 
-def DCPU16InstPrinter : AsmWriter {
-  string AsmWriterClassName  = "InstPrinter";
-  bit isMCAsmWriter = 1;
-}
+//def DCPU16InstPrinter : AsmWriter {
+//  string AsmWriterClassName  = "InstPrinter";
+//
+//  bit isMCAsmWriter = 1;
+//}
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
@@ -61,6 +62,6 @@ def DCPU16InstPrinter : AsmWriter {
 
 def DCPU16 : Target {
   let InstructionSet = DCPU16InstrInfo;
-  let AssemblyWriters = [DCPU16InstPrinter];
+  //let AssemblyWriters = [DCPU16InstPrinter];
 }
 
