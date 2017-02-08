@@ -19,5 +19,5 @@
 type = Library
 name = DCPU16Desc
 parent = DCPU16
-required_libraries = MC DCPU16Info Support Target
+required_libraries = MC DCPU16AsmPrinter DCPU16Info Support Target
 add_to_library_groups = DCPU16
