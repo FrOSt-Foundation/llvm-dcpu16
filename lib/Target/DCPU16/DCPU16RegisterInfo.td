@@ -20,6 +20,7 @@ class DCPU16Reg<bits<5> num, string n> : Register<n> {
 //  Registers
 //===----------------------------------------------------------------------===//
 
+let Namespace = "DCPU16" in {
 def A  : DCPU16Reg<0x0,  "A">;
 def B  : DCPU16Reg<0x1,  "B">;
 def C  : DCPU16Reg<0x2,  "C">;
@@ -47,3 +48,5 @@ def EXR16 : RegisterClass<"DCPU16", [i16], 16,
 // Both volatile registers and EX
 def GEXR16 : RegisterClass<"DCPU16", [i16], 16,
   (add GR16, EXR16)>;
+
+}

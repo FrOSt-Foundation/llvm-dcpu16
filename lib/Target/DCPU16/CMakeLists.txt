@@ -10,12 +10,12 @@ add_public_tablegen_target(DCPU16CommonTableGen)
 
 add_llvm_target(DCPU16CodeGen
   #DCPU16ISelDAGToDAG.cpp
-  #DCPU16ISelLowering.cpp
-  #DCPU16InstrInfo.cpp
-  #DCPU16FrameLowering.cpp
-  #DCPU16MachineFunctionInfo.cpp
-  #DCPU16RegisterInfo.cpp
-  #DCPU16Subtarget.cpp
+  DCPU16ISelLowering.cpp
+  DCPU16InstrInfo.cpp
+  DCPU16FrameLowering.cpp
+  DCPU16MachineFunctionInfo.cpp
+  DCPU16RegisterInfo.cpp
+  DCPU16Subtarget.cpp
   DCPU16TargetMachine.cpp
   #DCPU16AsmPrinter.cpp
   #DCPU16MCInstLower.cpp

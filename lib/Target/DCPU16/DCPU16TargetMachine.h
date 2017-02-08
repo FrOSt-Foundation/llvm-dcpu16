@@ -1,4 +1,4 @@
-//===-- DCPU16TargetMachine.h - Define TargetMachine for DCPU16 -----*- C++ -*-===//
+//===-- DCPU16TargetMachine.h - Define TargetMachine for DCPU16 -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,17 +11,61 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16TARGETMACHINE_H
-#define LLVM_LIB_TARGET_DCPU16_DCPU16TARGETMACHINE_H
 
-#include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/SelectionDAGISel.h"
+#ifndef LLVM_TARGET_DCPU16_TARGETMACHINE_H
+#define LLVM_TARGET_DCPU16_TARGETMACHINE_H
+
+#include "DCPU16InstrInfo.h"
+#include "DCPU16ISelLowering.h"
+#include "DCPU16FrameLowering.h"
+//#include "DCPU16SelectionDAGInfo.h"
+#include "DCPU16RegisterInfo.h"
+#include "DCPU16Subtarget.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
-} // End llvm namespace
+/// DCPU16TargetMachine
+///
+class DCPU16TargetMachine : public LLVMTargetMachine {
+  DCPU16Subtarget        Subtarget;
+  const DataLayout       dataLayout;       // Calculates type size & alignment
+  DCPU16InstrInfo        InstrInfo;
+  DCPU16TargetLowering   TLInfo;
+//  DCPU16SelectionDAGInfo TSInfo;
+  DCPU16FrameLowering    FrameLowering;
 
-#endif
+public:
+  DCPU16TargetMachine(const Target &T, const Triple &TT,
+                      StringRef CPU, StringRef FS, const TargetOptions &Options,
+                      Optional<Reloc::Model> &RM, CodeModel::Model CM,
+                      CodeGenOpt::Level OL);
+  virtual ~DCPU16TargetMachine();
+
+  virtual const TargetFrameLowering *getFrameLowering() const {
+    return &FrameLowering;
+  }
+  virtual const DCPU16InstrInfo *getInstrInfo() const  { return &InstrInfo; }
+  virtual const DataLayout *getDataLayout() const     { return &dataLayout;}
+  virtual const DCPU16Subtarget *getSubtargetImpl() const { return &Subtarget; }
+
+  virtual const TargetRegisterInfo *getRegisterInfo() const {
+    return &InstrInfo.getRegisterInfo();
+  }
+
+  virtual const DCPU16TargetLowering *getTargetLowering() const {
+    return &TLInfo;
+  }
+
+//  virtual const DCPU16SelectionDAGInfo* getSelectionDAGInfo() const {
+//    return &TSInfo;
+//  }
+
+  virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
+}; // DCPU16TargetMachine.
+
+} // end namespace llvm
+
+#endif // LLVM_TARGET_DCPU16_TARGETMACHINE_H

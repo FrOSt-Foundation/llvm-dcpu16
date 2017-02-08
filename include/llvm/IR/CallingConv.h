@@ -117,6 +117,9 @@ namespace CallingConv {
     /// Passes all arguments in register or parameter space.
     PTX_Device = 72,
 
+    // DCPU16_INTR - Calling convention used for DCPU16 interrupt routines.
+    DCPU16_INTR = 74,
+
     /// SPIR_FUNC - Calling convention for SPIR non-kernel device functions.
     /// No lowering or expansion of arguments.
     /// Structures are passed as a pointer to a struct with the byval attribute.
