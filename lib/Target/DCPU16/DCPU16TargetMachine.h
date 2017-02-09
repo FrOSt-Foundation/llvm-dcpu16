@@ -18,7 +18,7 @@
 #include "DCPU16InstrInfo.h"
 #include "DCPU16ISelLowering.h"
 #include "DCPU16FrameLowering.h"
-//#include "DCPU16SelectionDAGInfo.h"
+#include "DCPU16SelectionDAGInfo.h"
 #include "DCPU16RegisterInfo.h"
 #include "DCPU16Subtarget.h"
 #include "llvm/IR/DataLayout.h"
@@ -34,7 +34,7 @@ class DCPU16TargetMachine : public LLVMTargetMachine {
   const DataLayout       dataLayout;       // Calculates type size & alignment
   DCPU16InstrInfo        InstrInfo;
   DCPU16TargetLowering   TLInfo;
-//  DCPU16SelectionDAGInfo TSInfo;
+  DCPU16SelectionDAGInfo TSInfo;
   DCPU16FrameLowering    FrameLowering;
 
 public:
@@ -59,9 +59,9 @@ public:
     return &TLInfo;
   }
 
-//  virtual const DCPU16SelectionDAGInfo* getSelectionDAGInfo() const {
-//    return &TSInfo;
-//  }
+  virtual const DCPU16SelectionDAGInfo* getSelectionDAGInfo() const {
+    return &TSInfo;
+  }
 
   virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
 }; // DCPU16TargetMachine.
