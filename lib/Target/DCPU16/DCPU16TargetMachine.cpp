@@ -26,13 +26,9 @@ using namespace llvm;
 
 #define DATALAYOUT "e-p:16:16:16-i8:16:16-i16:16:16-i32:16:16-s0:16:16-n16"
 
-namespace llvm {
-Target TheDCPU16Target;
-}
-
 extern "C" void LLVMInitializeDCPU16Target() {
   // Register the target.
-  RegisterTargetMachine<DCPU16TargetMachine> X(TheDCPU16Target);
+  RegisterTargetMachine<DCPU16TargetMachine> X(getTheDCPU16Target());
 }
 
 DCPU16TargetMachine::DCPU16TargetMachine(const Target &T, const Triple &TT,

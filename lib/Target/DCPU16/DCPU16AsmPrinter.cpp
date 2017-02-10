@@ -172,11 +172,7 @@ void DCPU16AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   OutStreamer->EmitInstruction(TmpInst, *TM.getMCSubtargetInfo());
 }
 
-namespace llvm {
-extern Target TheDCPU16Target;
-}
-
 // Force static initialization.
 extern "C" void LLVMInitializeDCPU16AsmPrinter() {
-  RegisterAsmPrinter<DCPU16AsmPrinter> X(TheDCPU16Target);
+  RegisterAsmPrinter<DCPU16AsmPrinter> X(getTheDCPU16Target());
 }
