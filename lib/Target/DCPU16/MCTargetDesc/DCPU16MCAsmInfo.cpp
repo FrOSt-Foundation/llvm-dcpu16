@@ -23,4 +23,5 @@ DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Triple &TT) {
 
   AlignmentIsInBytes = false;
   UsesELFSectionDirectiveForBSS = true;
+  HasDotTypeDotSizeDirective = false;
 }

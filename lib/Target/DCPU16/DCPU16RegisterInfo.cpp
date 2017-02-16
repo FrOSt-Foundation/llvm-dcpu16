@@ -54,7 +54,7 @@ DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     0
   };
   static const MCPhysReg CalleeSavedRegsIntrFP[] = {
-    DCPU16::R1A,  DCPU16::R2B,  DCPU16::R3C,
+    DCPU16::R1A,  DCPU16::R2B,
     DCPU16::R4X,  DCPU16::R5Y,  DCPU16::R6Z, DCPU16::R7I,
     DCPU16::R8J, DCPU16::R13, DCPU16::R14, DCPU16::R15,
     0
