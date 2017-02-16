@@ -74,6 +74,8 @@ void DCPU16InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   // Otherwise (!) dcpu16-as will silently miscompile the output :(
   if (!Base.getReg())
     O << '&';
+  else
+    O << '[';
 
   if (Disp.isExpr())
     Disp.getExpr()->print(O, &MAI);
@@ -84,7 +86,7 @@ void DCPU16InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
 
   // Print register base field
   if (Base.getReg())
-    O << '(' << getRegisterName(Base.getReg()) << ')';
+    O << '+' << getRegisterName(Base.getReg()) << ']';
 }
 
 void DCPU16InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
