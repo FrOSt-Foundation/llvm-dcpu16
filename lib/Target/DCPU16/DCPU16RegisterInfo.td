@@ -27,7 +27,7 @@ class DCPU16RegWithSubregs<bits<4> num, string n, list<Register> subregs>
 //===----------------------------------------------------------------------===//
 
 def PCB  : DCPU16Reg<0,  "r0">;
-def SPB  : DCPU16Reg<1,  "r1">;
+def SPB  : DCPU16Reg<1,  "SP">;
 def SRB  : DCPU16Reg<2,  "r2">;
 def CGB  : DCPU16Reg<3,  "r3">;
 def FPB  : DCPU16Reg<4,  "r4">;
@@ -47,7 +47,7 @@ def subreg_8bit : SubRegIndex<8> { let Namespace = "DCPU16"; }
 
 let SubRegIndices = [subreg_8bit] in {
 def PC  : DCPU16RegWithSubregs<0,  "r0",  [PCB]>;
-def SP  : DCPU16RegWithSubregs<1,  "r1",  [SPB]>;
+def SP  : DCPU16RegWithSubregs<1,  "SP",  [SPB]>;
 def SR  : DCPU16RegWithSubregs<2,  "r2",  [SRB]>;
 def CG  : DCPU16RegWithSubregs<3,  "r3",  [CGB]>;
 def FP  : DCPU16RegWithSubregs<4,  "r4",  [FPB]>;
