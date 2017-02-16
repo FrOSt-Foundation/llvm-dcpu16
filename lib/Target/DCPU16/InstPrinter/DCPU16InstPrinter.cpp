@@ -71,21 +71,23 @@ void DCPU16InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   // vs
   //   SET r2, glb(r1)
   // Otherwise (!) dcpu16-as will silently miscompile the output :(
-  if (!Base.getReg())
-    O << '&';
-  else
-    O << '[';
+  O << '[';
 
   if (Disp.isExpr())
     Disp.getExpr()->print(O, &MAI);
   else {
     assert(Disp.isImm() && "Expected immediate in displacement field");
-    O << Disp.getImm();
+    if (Disp.getImm() != 0)
+        O << Disp.getImm();
   }
 
   // Print register base field
-  if (Base.getReg())
-    O << '+' << getRegisterName(Base.getReg()) << ']';
+  if (Base.getReg()) {
+      if (Disp.isImm() && Disp.isImm() != 0)
+        O << '+';
+      O << getRegisterName(Base.getReg());
+  }
+  O << ']';
 }
 
 void DCPU16InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
