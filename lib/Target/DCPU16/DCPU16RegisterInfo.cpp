@@ -33,25 +33,56 @@ using namespace llvm;
 
 // FIXME: Provide proper call frame setup / destroy opcodes.
 DCPU16RegisterInfo::DCPU16RegisterInfo()
-  : DCPU16GenRegisterInfo(DCPU16::RA) {}
+  : DCPU16GenRegisterInfo(DCPU16::PC) {}
 
 const MCPhysReg*
 DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-    // TODO: which ones do we really want to save?
+  const DCPU16FrameLowering *TFI = getFrameLowering(*MF);
+  const Function* F = MF->getFunction();
   static const MCPhysReg CalleeSavedRegs[] = {
-    DCPU16::RA, DCPU16::RB, DCPU16::RI,
+    DCPU16::FP, DCPU16::R1A, DCPU16::R2B, DCPU16::R7I,
+    0
+  };
+  static const MCPhysReg CalleeSavedRegsFP[] = {
+    DCPU16::R1A, DCPU16::R2B, DCPU16::R7I,
+    0
+  };
+  static const MCPhysReg CalleeSavedRegsIntr[] = {
+    DCPU16::FP,  DCPU16::R1A,  DCPU16::R2B,
+    DCPU16::R4X,  DCPU16::R5Y,  DCPU16::R6Z, DCPU16::R7I,
+    DCPU16::R8J,
+    0
+  };
+  static const MCPhysReg CalleeSavedRegsIntrFP[] = {
+    DCPU16::R1A,  DCPU16::R2B,
+    DCPU16::R4X,  DCPU16::R5Y,  DCPU16::R6Z, DCPU16::R7I,
+    DCPU16::R8J,
     0
   };
 
-    return CalleeSavedRegs;
+  if (TFI->hasFP(*MF))
+    return (F->getCallingConv() == CallingConv::DCPU16_INTR ?
+            CalleeSavedRegsIntrFP : CalleeSavedRegsFP);
+  else
+    return (F->getCallingConv() == CallingConv::DCPU16_INTR ?
+            CalleeSavedRegsIntr : CalleeSavedRegs);
+
 }
 
 BitVector DCPU16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
+  const DCPU16FrameLowering *TFI = getFrameLowering(MF);
 
-  // Mark 2 special registers as reserved.
-  Reserved.set(DCPU16::RSP);
-  Reserved.set(DCPU16::REX);
+  // Mark 4 special registers with subregisters as reserved.
+  Reserved.set(DCPU16::PC);
+  Reserved.set(DCPU16::SP);
+  Reserved.set(DCPU16::SR);
+  Reserved.set(DCPU16::CG);
+
+  // Mark frame pointer as reserved if needed.
+  if (TFI->hasFP(MF)) {
+    Reserved.set(DCPU16::FP);
+  }
 
   return Reserved;
 }
@@ -71,16 +102,20 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
+  const DCPU16FrameLowering *TFI = getFrameLowering(MF);
   DebugLoc dl = MI.getDebugLoc();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  unsigned BasePtr = DCPU16::RC;
+  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::FP : DCPU16::SP);
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
   Offset += 2;
 
-  Offset += MF.getFrameInfo().getStackSize();
+  if (!TFI->hasFP(MF))
+    Offset += MF.getFrameInfo().getStackSize();
+  else
+    Offset += 2; // Skip the saved FP
 
   // Fold imm into offset
   Offset += MI.getOperand(FIOperandNum + 1).getImm();
@@ -114,5 +149,6 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 unsigned DCPU16RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return DCPU16::RC;
+  const DCPU16FrameLowering *TFI = getFrameLowering(MF);
+  return TFI->hasFP(MF) ? DCPU16::FP : DCPU16::SP;
 }
