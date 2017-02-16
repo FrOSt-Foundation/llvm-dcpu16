@@ -269,7 +269,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    DCPU16::R15, DCPU16::R14, DCPU16::R13
+    DCPU16::R1A, DCPU16::R2B
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -1198,8 +1198,6 @@ DCPU16TargetLowering::EmitShiftInstr(MachineInstr &MI,
   // ShiftAmt = phi [%N, BB],      [%ShiftAmt2, LoopBB]
   // ShiftReg2 = shift ShiftReg
   // ShiftAmt2 = ShiftAmt - 1;
-    .addReg(SrcReg).addMBB(BB)
-    .addReg(ShiftReg2).addMBB(LoopBB);
   BuildMI(LoopBB, dl, TII.get(DCPU16::PHI), ShiftAmtReg)
     .addReg(ShiftAmtSrcReg).addMBB(BB)
     .addReg(ShiftAmtReg2).addMBB(LoopBB);

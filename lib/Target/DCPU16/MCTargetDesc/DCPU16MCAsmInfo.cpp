@@ -19,6 +19,9 @@ void DCPU16MCAsmInfo::anchor() { }
 DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Triple &TT) {
   PointerSize = CalleeSaveStackSlotSize = 2;
 
+  LabelPrefix = ":";
+  LabelSuffix = "";
+
   CommentString = ";";
 
   AlignmentIsInBytes = false;

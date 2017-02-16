@@ -105,6 +105,9 @@ protected:
   /// "#"
   StringRef CommentString;
 
+  /// LabelPrefix - This is prefixed to emitted labels. Defaults to ""
+  const char *LabelPrefix;
+
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
 
@@ -469,6 +472,7 @@ public:
   unsigned getCommentColumn() const { return 40; }
 
   StringRef getCommentString() const { return CommentString; }
+  const char *getLabelPrefix() const { return LabelPrefix; }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }

@@ -36,6 +36,7 @@ MCAsmInfo::MCAsmInfo() {
   DollarIsPC = false;
   SeparatorString = ";";
   CommentString = "#";
+  LabelPrefix = "";
   LabelSuffix = ":";
   UseAssignmentForEHBegin = false;
   NeedsLocalForSize = false;
