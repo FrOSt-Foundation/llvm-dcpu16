@@ -30,7 +30,7 @@
 #include "llvm/Target/TargetLowering.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "msp430-isel"
+#define DEBUG_TYPE "dcpu16-isel"
 
 namespace {
   struct DCPU16ISelAddressMode {

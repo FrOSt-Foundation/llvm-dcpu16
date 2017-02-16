@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "msp430-subtarget"
+#define DEBUG_TYPE "dcpu16-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR

@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "msp430-reg-info"
+#define DEBUG_TYPE "dcpu16-reg-info"
 
 #define GET_REGINFO_TARGET_DESC
 #include "DCPU16GenRegisterInfo.inc"

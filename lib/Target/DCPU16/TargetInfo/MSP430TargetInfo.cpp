@@ -18,6 +18,6 @@ Target &llvm::getTheDCPU16Target() {
 }
 
 extern "C" void LLVMInitializeDCPU16TargetInfo() {
-  RegisterTarget<Triple::msp430> X(getTheDCPU16Target(), "msp430",
+  RegisterTarget<Triple::dcpu16> X(getTheDCPU16Target(), "dcpu16",
                                    "DCPU16 [experimental]");
 }

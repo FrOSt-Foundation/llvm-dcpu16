@@ -25,10 +25,10 @@
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "msp430-branch-select"
+#define DEBUG_TYPE "dcpu16-branch-select"
 
 static cl::opt<bool>
-    BranchSelectEnabled("msp430-branch-select", cl::Hidden, cl::init(true),
+    BranchSelectEnabled("dcpu16-branch-select", cl::Hidden, cl::init(true),
                         cl::desc("Expand out of range branches"));
 
 STATISTIC(NumSplit, "Number of machine basic blocks split");
