@@ -770,3 +770,45 @@ def : Pat<(store (subc (load addr:$dst), GR16:$src), addr:$dst),
 def : Pat<(store (subc (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
           (SUB16mm addr:$dst, addr:$src)>;
 
+def MUL16rr : I16rr<0x0,
+                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                    "MUL\t{$dst, $src2}",
+                    [(set GR16:$dst, (mul GR16:$src, GR16:$src2)),
+                    (implicit SRW)]>;
+
+def MUL16ri : I16ri<0x0,
+                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                    "MUL\t{$dst, $src2}",
+                    [(set GR16:$dst, (mul GR16:$src, imm:$src2)),
+                    (implicit SRW)]>;
+
+def MUL16rm : I16rm<0x0,
+                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                    "MUL\t{$dst, $src2}",
+                    [(set GR16:$dst, (mul GR16:$src, (load addr:$src2))),
+                    (implicit SRW)]>;
+
+let mayload = 1, hasExtraDefRegAllocReq = 1 in {
+def MUL16rm_POST : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
+                            (outs GR16:$dsr, GR16:$base_wb),
+                            (ins GR16:$src, GR16:$base),
+                            "MUL\t{$dst, @$base+}", []>;
+}
+
+def MUL16mr : I16mr<0x0,
+                    (outs), (ins memdst:$dst, GR16:$src),
+                    "MUL\t{$dst, $src}",
+                    [(store (mul (load addr:$dst), GR16:$src), addr:$dst),
+                    (implicit SRW)]>;
+
+def MUL16mi : I16mi<0x0,
+                    (outs), (ins memdst:$dst, i16imm:$src),
+                    "MUL\t{$dst, $src}",
+                    [(store (mul (load addr:$dst), (i16 imm:$src)), addr:$dst),
+                    (implicit SRW)]>;
+
+def MUL16mm : I16mm<0x0,
+                    (outs), (ins memdst:$dst, memsrc:$src),
+                    "MUL\t{$dst, $src}",
+                    [(store (mul (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
+                    (implicit SRW)]>;
