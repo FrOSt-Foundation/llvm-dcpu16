@@ -1,4 +1,4 @@
-//=== MSP430MachineFunctionInfo.h - MSP430 machine function info -*- C++ -*-==//
+//=== DCPU16MachineFunctionInfo.h - DCPU16 machine function info -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares MSP430-specific per-machine-function information.
+// This file declares DCPU16-specific per-machine-function information.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MSP430_MSP430MACHINEFUNCTIONINFO_H
-#define LLVM_LIB_TARGET_MSP430_MSP430MACHINEFUNCTIONINFO_H
+#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16MACHINEFUNCTIONINFO_H
+#define LLVM_LIB_TARGET_DCPU16_DCPU16MACHINEFUNCTIONINFO_H
 
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
-/// MSP430MachineFunctionInfo - This class is derived from MachineFunction and
-/// contains private MSP430 target-specific information for each MachineFunction.
-class MSP430MachineFunctionInfo : public MachineFunctionInfo {
+/// DCPU16MachineFunctionInfo - This class is derived from MachineFunction and
+/// contains private DCPU16 target-specific information for each MachineFunction.
+class DCPU16MachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
 
   /// CalleeSavedFrameSize - Size of the callee-saved register portion of the
@@ -34,9 +34,9 @@ class MSP430MachineFunctionInfo : public MachineFunctionInfo {
   int VarArgsFrameIndex;
 
 public:
-  MSP430MachineFunctionInfo() : CalleeSavedFrameSize(0) {}
+  DCPU16MachineFunctionInfo() : CalleeSavedFrameSize(0) {}
 
-  explicit MSP430MachineFunctionInfo(MachineFunction &MF)
+  explicit DCPU16MachineFunctionInfo(MachineFunction &MF)
     : CalleeSavedFrameSize(0), ReturnAddrIndex(0) {}
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }

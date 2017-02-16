@@ -1,4 +1,4 @@
-//===-- MSP430MCTargetDesc.h - MSP430 Target Descriptions -------*- C++ -*-===//
+//===-- DCPU16MCTargetDesc.h - DCPU16 Target Descriptions -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,32 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides MSP430 specific target descriptions.
+// This file provides DCPU16 specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MSP430_MCTARGETDESC_MSP430MCTARGETDESC_H
-#define LLVM_LIB_TARGET_MSP430_MCTARGETDESC_MSP430MCTARGETDESC_H
+#ifndef LLVM_LIB_TARGET_DCPU16_MCTARGETDESC_DCPU16MCTARGETDESC_H
+#define LLVM_LIB_TARGET_DCPU16_MCTARGETDESC_DCPU16MCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 class Target;
 
-Target &getTheMSP430Target();
+Target &getTheDCPU16Target();
 
 } // End llvm namespace
 
-// Defines symbolic names for MSP430 registers.
+// Defines symbolic names for DCPU16 registers.
 // This defines a mapping from register name to register number.
 #define GET_REGINFO_ENUM
-#include "MSP430GenRegisterInfo.inc"
+#include "DCPU16GenRegisterInfo.inc"
 
-// Defines symbolic names for the MSP430 instructions.
+// Defines symbolic names for the DCPU16 instructions.
 #define GET_INSTRINFO_ENUM
-#include "MSP430GenInstrInfo.inc"
+#include "DCPU16GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
-#include "MSP430GenSubtargetInfo.inc"
+#include "DCPU16GenSubtargetInfo.inc"
 
 #endif

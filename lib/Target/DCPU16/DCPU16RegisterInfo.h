@@ -1,4 +1,4 @@
-//===-- MSP430RegisterInfo.h - MSP430 Register Information Impl -*- C++ -*-===//
+//===-- DCPU16RegisterInfo.h - DCPU16 Register Information Impl -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the MSP430 implementation of the MRegisterInfo class.
+// This file contains the DCPU16 implementation of the MRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MSP430_MSP430REGISTERINFO_H
-#define LLVM_LIB_TARGET_MSP430_MSP430REGISTERINFO_H
+#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16REGISTERINFO_H
+#define LLVM_LIB_TARGET_DCPU16_DCPU16REGISTERINFO_H
 
 #include "llvm/Target/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
-#include "MSP430GenRegisterInfo.inc"
+#include "DCPU16GenRegisterInfo.inc"
 
 namespace llvm {
 
-struct MSP430RegisterInfo : public MSP430GenRegisterInfo {
+struct DCPU16RegisterInfo : public DCPU16GenRegisterInfo {
 public:
-  MSP430RegisterInfo();
+  DCPU16RegisterInfo();
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;

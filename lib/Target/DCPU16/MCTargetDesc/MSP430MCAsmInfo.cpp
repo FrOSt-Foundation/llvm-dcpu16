@@ -1,4 +1,4 @@
-//===-- MSP430MCAsmInfo.cpp - MSP430 asm properties -----------------------===//
+//===-- DCPU16MCAsmInfo.cpp - DCPU16 asm properties -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the declarations of the MSP430MCAsmInfo properties.
+// This file contains the declarations of the DCPU16MCAsmInfo properties.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430MCAsmInfo.h"
+#include "DCPU16MCAsmInfo.h"
 using namespace llvm;
 
-void MSP430MCAsmInfo::anchor() { }
+void DCPU16MCAsmInfo::anchor() { }
 
-MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
+DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Triple &TT) {
   PointerSize = CalleeSaveStackSlotSize = 2;
 
   CommentString = ";";

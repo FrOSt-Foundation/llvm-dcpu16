@@ -1,4 +1,4 @@
-//==- MSP430FrameLowering.h - Define frame lowering for MSP430 --*- C++ -*--==//
+//==- DCPU16FrameLowering.h - Define frame lowering for DCPU16 --*- C++ -*--==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,18 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MSP430_MSP430FRAMELOWERING_H
-#define LLVM_LIB_TARGET_MSP430_MSP430FRAMELOWERING_H
+#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16FRAMELOWERING_H
+#define LLVM_LIB_TARGET_DCPU16_DCPU16FRAMELOWERING_H
 
-#include "MSP430.h"
+#include "DCPU16.h"
 #include "llvm/Target/TargetFrameLowering.h"
 
 namespace llvm {
-class MSP430FrameLowering : public TargetFrameLowering {
+class DCPU16FrameLowering : public TargetFrameLowering {
 protected:
 
 public:
-  explicit MSP430FrameLowering()
+  explicit DCPU16FrameLowering()
       : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 2, -2, 2) {}
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into

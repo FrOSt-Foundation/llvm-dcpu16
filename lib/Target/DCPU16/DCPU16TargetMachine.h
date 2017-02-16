@@ -1,4 +1,4 @@
-//===-- MSP430TargetMachine.h - Define TargetMachine for MSP430 -*- C++ -*-===//
+//===-- DCPU16TargetMachine.h - Define TargetMachine for DCPU16 -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,34 +7,34 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MSP430 specific subclass of TargetMachine.
+// This file declares the DCPU16 specific subclass of TargetMachine.
 //
 //===----------------------------------------------------------------------===//
 
 
-#ifndef LLVM_LIB_TARGET_MSP430_MSP430TARGETMACHINE_H
-#define LLVM_LIB_TARGET_MSP430_MSP430TARGETMACHINE_H
+#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16TARGETMACHINE_H
+#define LLVM_LIB_TARGET_DCPU16_DCPU16TARGETMACHINE_H
 
-#include "MSP430Subtarget.h"
+#include "DCPU16Subtarget.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
-/// MSP430TargetMachine
+/// DCPU16TargetMachine
 ///
-class MSP430TargetMachine : public LLVMTargetMachine {
+class DCPU16TargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  MSP430Subtarget        Subtarget;
+  DCPU16Subtarget        Subtarget;
 
 public:
-  MSP430TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+  DCPU16TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                       CodeGenOpt::Level OL);
-  ~MSP430TargetMachine() override;
+  ~DCPU16TargetMachine() override;
 
-  const MSP430Subtarget *getSubtargetImpl(const Function &F) const override {
+  const DCPU16Subtarget *getSubtargetImpl(const Function &F) const override {
     return &Subtarget;
   }
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -42,7 +42,7 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-}; // MSP430TargetMachine.
+}; // DCPU16TargetMachine.
 
 } // end namespace llvm
 

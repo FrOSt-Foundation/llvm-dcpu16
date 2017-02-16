@@ -1,3 +1,3 @@
-add_llvm_library(LLVMMSP430Info
-  MSP430TargetInfo.cpp
+add_llvm_library(LLVMDCPU16Info
+  DCPU16TargetInfo.cpp
   )

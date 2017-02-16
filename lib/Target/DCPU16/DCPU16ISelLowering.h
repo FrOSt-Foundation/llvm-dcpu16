@@ -1,4 +1,4 @@
-//===-- MSP430ISelLowering.h - MSP430 DAG Lowering Interface ----*- C++ -*-===//
+//===-- DCPU16ISelLowering.h - DCPU16 DAG Lowering Interface ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the interfaces that MSP430 uses to lower LLVM code into a
+// This file defines the interfaces that DCPU16 uses to lower LLVM code into a
 // selection DAG.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MSP430_MSP430ISELLOWERING_H
-#define LLVM_LIB_TARGET_MSP430_MSP430ISELLOWERING_H
+#ifndef LLVM_LIB_TARGET_DCPU16_DCPU16ISELLOWERING_H
+#define LLVM_LIB_TARGET_DCPU16_DCPU16ISELLOWERING_H
 
-#include "MSP430.h"
+#include "DCPU16.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
-  namespace MSP430ISD {
+  namespace DCPU16ISD {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
@@ -51,7 +51,7 @@ namespace llvm {
       /// operand produced by a CMP instruction.
       SETCC,
 
-      /// MSP430 conditional branches. Operand 0 is the chain operand, operand 1
+      /// DCPU16 conditional branches. Operand 0 is the chain operand, operand 1
       /// is the block to branch if condition is true, operand 2 is the
       /// condition code, and operand 3 is the flag operand produced by a CMP
       /// instruction.
@@ -66,11 +66,11 @@ namespace llvm {
     };
   }
 
-  class MSP430Subtarget;
-  class MSP430TargetLowering : public TargetLowering {
+  class DCPU16Subtarget;
+  class DCPU16TargetLowering : public TargetLowering {
   public:
-    explicit MSP430TargetLowering(const TargetMachine &TM,
-                                  const MSP430Subtarget &STI);
+    explicit DCPU16TargetLowering(const TargetMachine &TM,
+                                  const DCPU16Subtarget &STI);
 
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
       return MVT::i8;

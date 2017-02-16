@@ -1,4 +1,4 @@
-//===-- MSP430InstrInfo.cpp - MSP430 Instruction Information --------------===//
+//===-- DCPU16InstrInfo.cpp - DCPU16 Instruction Information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the MSP430 implementation of the TargetInstrInfo class.
+// This file contains the DCPU16 implementation of the TargetInstrInfo class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430InstrInfo.h"
-#include "MSP430.h"
-#include "MSP430MachineFunctionInfo.h"
-#include "MSP430TargetMachine.h"
+#include "DCPU16InstrInfo.h"
+#include "DCPU16.h"
+#include "DCPU16MachineFunctionInfo.h"
+#include "DCPU16TargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -25,16 +25,16 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
-#include "MSP430GenInstrInfo.inc"
+#include "DCPU16GenInstrInfo.inc"
 
 // Pin the vtable to this file.
-void MSP430InstrInfo::anchor() {}
+void DCPU16InstrInfo::anchor() {}
 
-MSP430InstrInfo::MSP430InstrInfo(MSP430Subtarget &STI)
-  : MSP430GenInstrInfo(MSP430::ADJCALLSTACKDOWN, MSP430::ADJCALLSTACKUP),
+DCPU16InstrInfo::DCPU16InstrInfo(DCPU16Subtarget &STI)
+  : DCPU16GenInstrInfo(DCPU16::ADJCALLSTACKDOWN, DCPU16::ADJCALLSTACKUP),
     RI() {}
 
-void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+void DCPU16InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MI,
                                     unsigned SrcReg, bool isKill, int FrameIdx,
                                           const TargetRegisterClass *RC,
@@ -49,19 +49,19 @@ void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIdx),
       MFI.getObjectAlignment(FrameIdx));
 
-  if (RC == &MSP430::GR16RegClass)
-    BuildMI(MBB, MI, DL, get(MSP430::MOV16mr))
+  if (RC == &DCPU16::GR16RegClass)
+    BuildMI(MBB, MI, DL, get(DCPU16::MOV16mr))
       .addFrameIndex(FrameIdx).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
-  else if (RC == &MSP430::GR8RegClass)
-    BuildMI(MBB, MI, DL, get(MSP430::MOV8mr))
+  else if (RC == &DCPU16::GR8RegClass)
+    BuildMI(MBB, MI, DL, get(DCPU16::MOV8mr))
       .addFrameIndex(FrameIdx).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
 
-void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+void DCPU16InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
                                            unsigned DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
@@ -76,27 +76,27 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
       MFI.getObjectAlignment(FrameIdx));
 
-  if (RC == &MSP430::GR16RegClass)
-    BuildMI(MBB, MI, DL, get(MSP430::MOV16rm))
+  if (RC == &DCPU16::GR16RegClass)
+    BuildMI(MBB, MI, DL, get(DCPU16::MOV16rm))
       .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
       .addImm(0).addMemOperand(MMO);
-  else if (RC == &MSP430::GR8RegClass)
-    BuildMI(MBB, MI, DL, get(MSP430::MOV8rm))
+  else if (RC == &DCPU16::GR8RegClass)
+    BuildMI(MBB, MI, DL, get(DCPU16::MOV8rm))
       .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
       .addImm(0).addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
 
-void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+void DCPU16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, unsigned DestReg,
                                   unsigned SrcReg, bool KillSrc) const {
   unsigned Opc;
-  if (MSP430::GR16RegClass.contains(DestReg, SrcReg))
-    Opc = MSP430::MOV16rr;
-  else if (MSP430::GR8RegClass.contains(DestReg, SrcReg))
-    Opc = MSP430::MOV8rr;
+  if (DCPU16::GR16RegClass.contains(DestReg, SrcReg))
+    Opc = DCPU16::MOV16rr;
+  else if (DCPU16::GR8RegClass.contains(DestReg, SrcReg))
+    Opc = DCPU16::MOV8rr;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -104,7 +104,7 @@ void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
+unsigned DCPU16InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                        int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -115,10 +115,10 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
     --I;
     if (I->isDebugValue())
       continue;
-    if (I->getOpcode() != MSP430::JMP &&
-        I->getOpcode() != MSP430::JCC &&
-        I->getOpcode() != MSP430::Br &&
-        I->getOpcode() != MSP430::Bm)
+    if (I->getOpcode() != DCPU16::JMP &&
+        I->getOpcode() != DCPU16::JCC &&
+        I->getOpcode() != DCPU16::Br &&
+        I->getOpcode() != DCPU16::Bm)
       break;
     // Remove the branch.
     I->eraseFromParent();
@@ -129,31 +129,31 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool MSP430InstrInfo::
+bool DCPU16InstrInfo::
 reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid Xbranch condition!");
 
-  MSP430CC::CondCodes CC = static_cast<MSP430CC::CondCodes>(Cond[0].getImm());
+  DCPU16CC::CondCodes CC = static_cast<DCPU16CC::CondCodes>(Cond[0].getImm());
 
   switch (CC) {
   default: llvm_unreachable("Invalid branch condition!");
-  case MSP430CC::COND_E:
-    CC = MSP430CC::COND_NE;
+  case DCPU16CC::COND_E:
+    CC = DCPU16CC::COND_NE;
     break;
-  case MSP430CC::COND_NE:
-    CC = MSP430CC::COND_E;
+  case DCPU16CC::COND_NE:
+    CC = DCPU16CC::COND_E;
     break;
-  case MSP430CC::COND_L:
-    CC = MSP430CC::COND_GE;
+  case DCPU16CC::COND_L:
+    CC = DCPU16CC::COND_GE;
     break;
-  case MSP430CC::COND_GE:
-    CC = MSP430CC::COND_L;
+  case DCPU16CC::COND_GE:
+    CC = DCPU16CC::COND_L;
     break;
-  case MSP430CC::COND_HS:
-    CC = MSP430CC::COND_LO;
+  case DCPU16CC::COND_HS:
+    CC = DCPU16CC::COND_LO;
     break;
-  case MSP430CC::COND_LO:
-    CC = MSP430CC::COND_HS;
+  case DCPU16CC::COND_LO:
+    CC = DCPU16CC::COND_HS;
     break;
   }
 
@@ -161,7 +161,7 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-bool MSP430InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
+bool DCPU16InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
   if (!MI.isTerminator())
     return false;
 
@@ -173,7 +173,7 @@ bool MSP430InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
   return !isPredicated(MI);
 }
 
-bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
+bool DCPU16InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&TBB,
                                     MachineBasicBlock *&FBB,
                                     SmallVectorImpl<MachineOperand> &Cond,
@@ -197,12 +197,12 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       return true;
 
     // Cannot handle indirect branches.
-    if (I->getOpcode() == MSP430::Br ||
-        I->getOpcode() == MSP430::Bm)
+    if (I->getOpcode() == DCPU16::Br ||
+        I->getOpcode() == DCPU16::Bm)
       return true;
 
     // Handle unconditional branches.
-    if (I->getOpcode() == MSP430::JMP) {
+    if (I->getOpcode() == DCPU16::JMP) {
       if (!AllowModify) {
         TBB = I->getOperand(0).getMBB();
         continue;
@@ -228,10 +228,10 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
 
     // Handle conditional branches.
-    assert(I->getOpcode() == MSP430::JCC && "Invalid conditional branch");
-    MSP430CC::CondCodes BranchCode =
-      static_cast<MSP430CC::CondCodes>(I->getOperand(1).getImm());
-    if (BranchCode == MSP430CC::COND_INVALID)
+    assert(I->getOpcode() == DCPU16::JCC && "Invalid conditional branch");
+    DCPU16CC::CondCodes BranchCode =
+      static_cast<DCPU16CC::CondCodes>(I->getOperand(1).getImm());
+    if (BranchCode == DCPU16CC::COND_INVALID)
       return true;  // Can't handle weird stuff.
 
     // Working from the bottom, handle the first conditional branch.
@@ -252,7 +252,7 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (TBB != I->getOperand(0).getMBB())
       return true;
 
-    MSP430CC::CondCodes OldBranchCode = (MSP430CC::CondCodes)Cond[0].getImm();
+    DCPU16CC::CondCodes OldBranchCode = (DCPU16CC::CondCodes)Cond[0].getImm();
     // If the conditions are the same, we can leave them alone.
     if (OldBranchCode == BranchCode)
       continue;
@@ -263,7 +263,7 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
+unsigned DCPU16InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock *TBB,
                                        MachineBasicBlock *FBB,
                                        ArrayRef<MachineOperand> Cond,
@@ -272,24 +272,24 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&
-         "MSP430 branch conditions have one component!");
+         "DCPU16 branch conditions have one component!");
   assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {
     // Unconditional branch?
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(TBB);
+    BuildMI(&MBB, DL, get(DCPU16::JMP)).addMBB(TBB);
     return 1;
   }
 
   // Conditional branch.
   unsigned Count = 0;
-  BuildMI(&MBB, DL, get(MSP430::JCC)).addMBB(TBB).addImm(Cond[0].getImm());
+  BuildMI(&MBB, DL, get(DCPU16::JCC)).addMBB(TBB).addImm(Cond[0].getImm());
   ++Count;
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
-    BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(FBB);
+    BuildMI(&MBB, DL, get(DCPU16::JMP)).addMBB(FBB);
     ++Count;
   }
   return Count;
@@ -298,10 +298,10 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 ///
-unsigned MSP430InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+unsigned DCPU16InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
 
-  switch (Desc.TSFlags & MSP430II::SizeMask) {
+  switch (Desc.TSFlags & DCPU16II::SizeMask) {
   default:
     switch (Desc.getOpcode()) {
     default: llvm_unreachable("Unknown instruction size!");
@@ -318,18 +318,18 @@ unsigned MSP430InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
                                     *MF->getTarget().getMCAsmInfo());
     }
     }
-  case MSP430II::SizeSpecial:
+  case DCPU16II::SizeSpecial:
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unknown instruction size!");
-    case MSP430::SAR8r1c:
-    case MSP430::SAR16r1c:
+    case DCPU16::SAR8r1c:
+    case DCPU16::SAR16r1c:
       return 4;
     }
-  case MSP430II::Size2Bytes:
+  case DCPU16II::Size2Bytes:
     return 2;
-  case MSP430II::Size4Bytes:
+  case DCPU16II::Size4Bytes:
     return 4;
-  case MSP430II::Size6Bytes:
+  case DCPU16II::Size6Bytes:
     return 6;
   }
 }

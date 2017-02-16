@@ -1,4 +1,4 @@
-//===-- MSP430BranchSelector.cpp - Emit long conditional branches ---------===//
+//===-- DCPU16BranchSelector.cpp - Emit long conditional branches ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,9 +15,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430.h"
-#include "MSP430InstrInfo.h"
-#include "MSP430Subtarget.h"
+#include "DCPU16.h"
+#include "DCPU16InstrInfo.h"
+#include "DCPU16Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -35,12 +35,12 @@ STATISTIC(NumSplit, "Number of machine basic blocks split");
 STATISTIC(NumExpanded, "Number of branches expanded to long format");
 
 namespace {
-class MSP430BSel : public MachineFunctionPass {
+class DCPU16BSel : public MachineFunctionPass {
 
   typedef SmallVector<int, 16> OffsetVector;
 
   MachineFunction *MF;
-  const MSP430InstrInfo *TII;
+  const DCPU16InstrInfo *TII;
 
   unsigned measureFunction(OffsetVector &BlockOffsets,
                            MachineBasicBlock *FromBB = nullptr);
@@ -48,7 +48,7 @@ class MSP430BSel : public MachineFunctionPass {
 
 public:
   static char ID;
-  MSP430BSel() : MachineFunctionPass(ID) {}
+  DCPU16BSel() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -57,9 +57,9 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  StringRef getPassName() const override { return "MSP430 Branch Selector"; }
+  StringRef getPassName() const override { return "DCPU16 Branch Selector"; }
 };
-char MSP430BSel::ID = 0;
+char DCPU16BSel::ID = 0;
 }
 
 static bool isInRage(int DistanceInBytes) {
@@ -78,7 +78,7 @@ static bool isInRage(int DistanceInBytes) {
 
 /// Measure each basic block, fill the BlockOffsets, and return the size of
 /// the function, starting with BB
-unsigned MSP430BSel::measureFunction(OffsetVector &BlockOffsets,
+unsigned DCPU16BSel::measureFunction(OffsetVector &BlockOffsets,
                                      MachineBasicBlock *FromBB) {
   // Give the blocks of the function a dense, in-order, numbering.
   MF->RenumberBlocks(FromBB);
@@ -104,7 +104,7 @@ unsigned MSP430BSel::measureFunction(OffsetVector &BlockOffsets,
 
 /// Do expand branches and split the basic blocks if necessary.
 /// Returns true if made any change.
-bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
+bool DCPU16BSel::expandBranches(OffsetVector &BlockOffsets) {
   // For each conditional branch, if the offset to its destination is larger
   // than the offset field allows, transform it into a long branch sequence
   // like this:
@@ -121,7 +121,7 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
       MBBStartOffset += TII->getInstSizeInBytes(*MI);
 
       // If this instruction is not a short branch then skip it.
-      if (MI->getOpcode() != MSP430::JCC && MI->getOpcode() != MSP430::JMP) {
+      if (MI->getOpcode() != DCPU16::JCC && MI->getOpcode() != DCPU16::JMP) {
         continue;
       }
 
@@ -143,7 +143,7 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
                    << "\n");
 
       // If JCC is not the last instruction we need to split the MBB.
-      if (MI->getOpcode() == MSP430::JCC && std::next(MI) != EE) {
+      if (MI->getOpcode() == DCPU16::JCC && std::next(MI) != EE) {
 
         DEBUG(dbgs() << "  Found a basic block that needs to be split, BB#"
                      << MBB->getNumber() << "\n");
@@ -180,20 +180,20 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
       DebugLoc dl = OldBranch.getDebugLoc();
       int InstrSizeDiff = -TII->getInstSizeInBytes(OldBranch);
 
-      if (MI->getOpcode() == MSP430::JCC) {
+      if (MI->getOpcode() == DCPU16::JCC) {
         MachineBasicBlock *NextMBB = &*std::next(MBB);
         assert(MBB->isSuccessor(NextMBB) &&
                "This block must have a layout successor!");
 
         // The BCC operands are:
         // 0. Target MBB
-        // 1. MSP430 branch predicate
+        // 1. DCPU16 branch predicate
         SmallVector<MachineOperand, 1> Cond;
         Cond.push_back(MI->getOperand(1));
 
         // Jump over the long branch on the opposite condition
         TII->reverseBranchCondition(Cond);
-        MI = BuildMI(*MBB, MI, dl, TII->get(MSP430::JCC))
+        MI = BuildMI(*MBB, MI, dl, TII->get(DCPU16::JCC))
                              .addMBB(NextMBB)
                              .addOperand(Cond[0]);
         InstrSizeDiff += TII->getInstSizeInBytes(*MI);
@@ -201,7 +201,7 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
       }
 
       // Unconditional branch to the real destination.
-      MI = BuildMI(*MBB, MI, dl, TII->get(MSP430::Bi)).addMBB(DestBB);
+      MI = BuildMI(*MBB, MI, dl, TII->get(DCPU16::Bi)).addMBB(DestBB);
       InstrSizeDiff += TII->getInstSizeInBytes(*MI);
 
       // Remove the old branch from the function.
@@ -221,9 +221,9 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
   return MadeChange;
 }
 
-bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
+bool DCPU16BSel::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-  TII = static_cast<const MSP430InstrInfo *>(MF->getSubtarget().getInstrInfo());
+  TII = static_cast<const DCPU16InstrInfo *>(MF->getSubtarget().getInstrInfo());
 
   // If the pass is disabled, just bail early.
   if (!BranchSelectEnabled)
@@ -252,6 +252,6 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
 }
 
 /// Returns an instance of the Branch Selection Pass
-FunctionPass *llvm::createMSP430BranchSelectionPass() {
-  return new MSP430BSel();
+FunctionPass *llvm::createDCPU16BranchSelectionPass() {
+  return new DCPU16BSel();
 }

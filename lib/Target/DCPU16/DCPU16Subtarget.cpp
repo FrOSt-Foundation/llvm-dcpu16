@@ -1,4 +1,4 @@
-//===-- MSP430Subtarget.cpp - MSP430 Subtarget Information ----------------===//
+//===-- DCPU16Subtarget.cpp - DCPU16 Subtarget Information ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the MSP430 specific subclass of TargetSubtargetInfo.
+// This file implements the DCPU16 specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430Subtarget.h"
-#include "MSP430.h"
+#include "DCPU16Subtarget.h"
+#include "DCPU16.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -21,17 +21,17 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
-#include "MSP430GenSubtargetInfo.inc"
+#include "DCPU16GenSubtargetInfo.inc"
 
-void MSP430Subtarget::anchor() { }
+void DCPU16Subtarget::anchor() { }
 
-MSP430Subtarget &
-MSP430Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
+DCPU16Subtarget &
+DCPU16Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   ParseSubtargetFeatures("generic", FS);
   return *this;
 }
 
-MSP430Subtarget::MSP430Subtarget(const Triple &TT, const std::string &CPU,
+DCPU16Subtarget::DCPU16Subtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM)
-    : MSP430GenSubtargetInfo(TT, CPU, FS), FrameLowering(),
+    : DCPU16GenSubtargetInfo(TT, CPU, FS), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {}

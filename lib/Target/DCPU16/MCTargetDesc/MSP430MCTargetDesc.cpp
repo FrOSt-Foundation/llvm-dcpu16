@@ -1,4 +1,4 @@
-//===-- MSP430MCTargetDesc.cpp - MSP430 Target Descriptions ---------------===//
+//===-- DCPU16MCTargetDesc.cpp - DCPU16 Target Descriptions ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides MSP430 specific target descriptions.
+// This file provides DCPU16 specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430MCTargetDesc.h"
-#include "InstPrinter/MSP430InstPrinter.h"
-#include "MSP430MCAsmInfo.h"
+#include "DCPU16MCTargetDesc.h"
+#include "InstPrinter/DCPU16InstPrinter.h"
+#include "DCPU16MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -22,58 +22,58 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
-#include "MSP430GenInstrInfo.inc"
+#include "DCPU16GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
-#include "MSP430GenSubtargetInfo.inc"
+#include "DCPU16GenSubtargetInfo.inc"
 
 #define GET_REGINFO_MC_DESC
-#include "MSP430GenRegisterInfo.inc"
+#include "DCPU16GenRegisterInfo.inc"
 
-static MCInstrInfo *createMSP430MCInstrInfo() {
+static MCInstrInfo *createDCPU16MCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
-  InitMSP430MCInstrInfo(X);
+  InitDCPU16MCInstrInfo(X);
   return X;
 }
 
-static MCRegisterInfo *createMSP430MCRegisterInfo(const Triple &TT) {
+static MCRegisterInfo *createDCPU16MCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitMSP430MCRegisterInfo(X, MSP430::PC);
+  InitDCPU16MCRegisterInfo(X, DCPU16::PC);
   return X;
 }
 
 static MCSubtargetInfo *
-createMSP430MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  return createMSP430MCSubtargetInfoImpl(TT, CPU, FS);
+createDCPU16MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  return createDCPU16MCSubtargetInfoImpl(TT, CPU, FS);
 }
 
-static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
+static MCInstPrinter *createDCPU16MCInstPrinter(const Triple &T,
                                                 unsigned SyntaxVariant,
                                                 const MCAsmInfo &MAI,
                                                 const MCInstrInfo &MII,
                                                 const MCRegisterInfo &MRI) {
   if (SyntaxVariant == 0)
-    return new MSP430InstPrinter(MAI, MII, MRI);
+    return new DCPU16InstPrinter(MAI, MII, MRI);
   return nullptr;
 }
 
-extern "C" void LLVMInitializeMSP430TargetMC() {
+extern "C" void LLVMInitializeDCPU16TargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfo<MSP430MCAsmInfo> X(getTheMSP430Target());
+  RegisterMCAsmInfo<DCPU16MCAsmInfo> X(getTheDCPU16Target());
 
   // Register the MC instruction info.
-  TargetRegistry::RegisterMCInstrInfo(getTheMSP430Target(),
-                                      createMSP430MCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheDCPU16Target(),
+                                      createDCPU16MCInstrInfo);
 
   // Register the MC register info.
-  TargetRegistry::RegisterMCRegInfo(getTheMSP430Target(),
-                                    createMSP430MCRegisterInfo);
+  TargetRegistry::RegisterMCRegInfo(getTheDCPU16Target(),
+                                    createDCPU16MCRegisterInfo);
 
   // Register the MC subtarget info.
-  TargetRegistry::RegisterMCSubtargetInfo(getTheMSP430Target(),
-                                          createMSP430MCSubtargetInfo);
+  TargetRegistry::RegisterMCSubtargetInfo(getTheDCPU16Target(),
+                                          createDCPU16MCSubtargetInfo);
 
   // Register the MCInstPrinter.
-  TargetRegistry::RegisterMCInstPrinter(getTheMSP430Target(),
-                                        createMSP430MCInstPrinter);
+  TargetRegistry::RegisterMCInstPrinter(getTheDCPU16Target(),
+                                        createDCPU16MCInstPrinter);
 }

@@ -1,4 +1,4 @@
-//===-- MSP430TargetMachine.cpp - Define TargetMachine for MSP430 ---------===//
+//===-- DCPU16TargetMachine.cpp - Define TargetMachine for DCPU16 ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Top-level implementation for the MSP430 target.
+// Top-level implementation for the DCPU16 target.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430TargetMachine.h"
-#include "MSP430.h"
+#include "DCPU16TargetMachine.h"
+#include "DCPU16.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -21,9 +21,9 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-extern "C" void LLVMInitializeMSP430Target() {
+extern "C" void LLVMInitializeDCPU16Target() {
   // Register the target.
-  RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
+  RegisterTargetMachine<DCPU16TargetMachine> X(getTheDCPU16Target());
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -32,7 +32,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
-MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
+DCPU16TargetMachine::DCPU16TargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
                                          Optional<Reloc::Model> RM,
@@ -46,17 +46,17 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
-MSP430TargetMachine::~MSP430TargetMachine() {}
+DCPU16TargetMachine::~DCPU16TargetMachine() {}
 
 namespace {
-/// MSP430 Code Generator Pass Configuration Options.
-class MSP430PassConfig : public TargetPassConfig {
+/// DCPU16 Code Generator Pass Configuration Options.
+class DCPU16PassConfig : public TargetPassConfig {
 public:
-  MSP430PassConfig(MSP430TargetMachine *TM, PassManagerBase &PM)
+  DCPU16PassConfig(DCPU16TargetMachine *TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
-  MSP430TargetMachine &getMSP430TargetMachine() const {
-    return getTM<MSP430TargetMachine>();
+  DCPU16TargetMachine &getDCPU16TargetMachine() const {
+    return getTM<DCPU16TargetMachine>();
   }
 
   bool addInstSelector() override;
@@ -64,17 +64,17 @@ public:
 };
 } // namespace
 
-TargetPassConfig *MSP430TargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new MSP430PassConfig(this, PM);
+TargetPassConfig *DCPU16TargetMachine::createPassConfig(PassManagerBase &PM) {
+  return new DCPU16PassConfig(this, PM);
 }
 
-bool MSP430PassConfig::addInstSelector() {
+bool DCPU16PassConfig::addInstSelector() {
   // Install an instruction selector.
-  addPass(createMSP430ISelDag(getMSP430TargetMachine(), getOptLevel()));
+  addPass(createDCPU16ISelDag(getDCPU16TargetMachine(), getOptLevel()));
   return false;
 }
 
-void MSP430PassConfig::addPreEmitPass() {
+void DCPU16PassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.
-  addPass(createMSP430BranchSelectionPass(), false);
+  addPass(createDCPU16BranchSelectionPass(), false);
 }

@@ -1,4 +1,4 @@
-//===-- MSP430FrameLowering.cpp - MSP430 Frame Information ----------------===//
+//===-- DCPU16FrameLowering.cpp - DCPU16 Frame Information ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the MSP430 implementation of TargetFrameLowering class.
+// This file contains the DCPU16 implementation of TargetFrameLowering class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430FrameLowering.h"
-#include "MSP430InstrInfo.h"
-#include "MSP430MachineFunctionInfo.h"
-#include "MSP430Subtarget.h"
+#include "DCPU16FrameLowering.h"
+#include "DCPU16InstrInfo.h"
+#include "DCPU16MachineFunctionInfo.h"
+#include "DCPU16Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
+bool DCPU16FrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
@@ -34,17 +34,17 @@ bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
           MFI.isFrameAddressTaken());
 }
 
-bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
+bool DCPU16FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return !MF.getFrameInfo().hasVarSizedObjects();
 }
 
-void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
+void DCPU16FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MSP430MachineFunctionInfo *MSP430FI = MF.getInfo<MSP430MachineFunctionInfo>();
-  const MSP430InstrInfo &TII =
-      *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  DCPU16MachineFunctionInfo *DCPU16FI = MF.getInfo<DCPU16MachineFunctionInfo>();
+  const DCPU16InstrInfo &TII =
+      *static_cast<const DCPU16InstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
@@ -56,7 +56,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
   if (hasFP(MF)) {
     // Calculate required stack adjustment
     uint64_t FrameSize = StackSize - 2;
-    NumBytes = FrameSize - MSP430FI->getCalleeSavedFrameSize();
+    NumBytes = FrameSize - DCPU16FI->getCalleeSavedFrameSize();
 
     // Get the offset of the stack slot for the EBP register... which is
     // guaranteed to be the last slot by processFunctionBeforeFrameFinalized.
@@ -64,23 +64,23 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
     MFI.setOffsetAdjustment(-NumBytes);
 
     // Save FP into the appropriate stack slot...
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::PUSH16r))
-      .addReg(MSP430::FP, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::PUSH16r))
+      .addReg(DCPU16::FP, RegState::Kill);
 
     // Update FP with the new base value...
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::FP)
-      .addReg(MSP430::SP);
+    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::MOV16rr), DCPU16::FP)
+      .addReg(DCPU16::SP);
 
     // Mark the FramePtr as live-in in every block except the entry.
     for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
          I != E; ++I)
-      I->addLiveIn(MSP430::FP);
+      I->addLiveIn(DCPU16::FP);
 
   } else
-    NumBytes = StackSize - MSP430FI->getCalleeSavedFrameSize();
+    NumBytes = StackSize - DCPU16FI->getCalleeSavedFrameSize();
 
   // Skip the callee-saved push instructions.
-  while (MBBI != MBB.end() && (MBBI->getOpcode() == MSP430::PUSH16r))
+  while (MBBI != MBB.end() && (MBBI->getOpcode() == DCPU16::PUSH16r))
     ++MBBI;
 
   if (MBBI != MBB.end())
@@ -96,35 +96,35 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes);
+        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::SUB16ri), DCPU16::SP)
+        .addReg(DCPU16::SP).addImm(NumBytes);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
   }
 }
 
-void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
+void DCPU16FrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  MSP430MachineFunctionInfo *MSP430FI = MF.getInfo<MSP430MachineFunctionInfo>();
-  const MSP430InstrInfo &TII =
-      *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  DCPU16MachineFunctionInfo *DCPU16FI = MF.getInfo<DCPU16MachineFunctionInfo>();
+  const DCPU16InstrInfo &TII =
+      *static_cast<const DCPU16InstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   unsigned RetOpcode = MBBI->getOpcode();
   DebugLoc DL = MBBI->getDebugLoc();
 
   switch (RetOpcode) {
-  case MSP430::RET:
-  case MSP430::RETI: break;  // These are ok
+  case DCPU16::RET:
+  case DCPU16::RETI: break;  // These are ok
   default:
     llvm_unreachable("Can only insert epilog into returning blocks");
   }
 
   // Get the number of bytes to allocate from the FrameInfo
   uint64_t StackSize = MFI.getStackSize();
-  unsigned CSSize = MSP430FI->getCalleeSavedFrameSize();
+  unsigned CSSize = DCPU16FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
 
   if (hasFP(MF)) {
@@ -133,7 +133,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     NumBytes = FrameSize - CSSize;
 
     // pop FP.
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::FP);
+    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::POP16r), DCPU16::FP);
   } else
     NumBytes = StackSize - CSSize;
 
@@ -141,7 +141,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
   while (MBBI != MBB.begin()) {
     MachineBasicBlock::iterator PI = std::prev(MBBI);
     unsigned Opc = PI->getOpcode();
-    if (Opc != MSP430::POP16r && !PI->isTerminator())
+    if (Opc != DCPU16::POP16r && !PI->isTerminator())
       break;
     --MBBI;
   }
@@ -155,12 +155,12 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MFI.hasVarSizedObjects()) {
     BuildMI(MBB, MBBI, DL,
-            TII.get(MSP430::MOV16rr), MSP430::SP).addReg(MSP430::FP);
+            TII.get(DCPU16::MOV16rr), DCPU16::SP).addReg(DCPU16::FP);
     if (CSSize) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL,
-                TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(CSSize);
+                TII.get(DCPU16::SUB16ri), DCPU16::SP)
+        .addReg(DCPU16::SP).addImm(CSSize);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -168,8 +168,8 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     // adjust stack pointer back: SP += numbytes
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(MSP430::ADD16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes);
+        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::ADD16ri), DCPU16::SP)
+        .addReg(DCPU16::SP).addImm(NumBytes);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -178,7 +178,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
 // FIXME: Can we eleminate these in favour of generic code?
 bool
-MSP430FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+DCPU16FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
                                         const std::vector<CalleeSavedInfo> &CSI,
                                         const TargetRegisterInfo *TRI) const {
@@ -190,21 +190,21 @@ MSP430FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  MSP430MachineFunctionInfo *MFI = MF.getInfo<MSP430MachineFunctionInfo>();
+  DCPU16MachineFunctionInfo *MFI = MF.getInfo<DCPU16MachineFunctionInfo>();
   MFI->setCalleeSavedFrameSize(CSI.size() * 2);
 
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i-1].getReg();
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
-    BuildMI(MBB, MI, DL, TII.get(MSP430::PUSH16r))
+    BuildMI(MBB, MI, DL, TII.get(DCPU16::PUSH16r))
       .addReg(Reg, RegState::Kill);
   }
   return true;
 }
 
 bool
-MSP430FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+DCPU16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                                  MachineBasicBlock::iterator MI,
                                         const std::vector<CalleeSavedInfo> &CSI,
                                         const TargetRegisterInfo *TRI) const {
@@ -218,16 +218,16 @@ MSP430FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i)
-    BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), CSI[i].getReg());
+    BuildMI(MBB, MI, DL, TII.get(DCPU16::POP16r), CSI[i].getReg());
 
   return true;
 }
 
-MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
+MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  const MSP430InstrInfo &TII =
-      *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const DCPU16InstrInfo &TII =
+      *static_cast<const DCPU16InstrInfo *>(MF.getSubtarget().getInstrInfo());
   unsigned StackAlign = getStackAlignment();
 
   if (!hasReservedCallFrame(MF)) {
@@ -246,8 +246,8 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
       MachineInstr *New = nullptr;
       if (Old.getOpcode() == TII.getCallFrameSetupOpcode()) {
         New =
-            BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::SUB16ri), MSP430::SP)
-                .addReg(MSP430::SP)
+            BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::SP)
+                .addReg(DCPU16::SP)
                 .addImm(Amount);
       } else {
         assert(Old.getOpcode() == TII.getCallFrameDestroyOpcode());
@@ -255,9 +255,9 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
         uint64_t CalleeAmt = Old.getOperand(1).getImm();
         Amount -= CalleeAmt;
         if (Amount)
-          New = BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::ADD16ri),
-                        MSP430::SP)
-                    .addReg(MSP430::SP)
+          New = BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::ADD16ri),
+                        DCPU16::SP)
+                    .addReg(DCPU16::SP)
                     .addImm(Amount);
       }
 
@@ -275,8 +275,8 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
     if (uint64_t CalleeAmt = I->getOperand(1).getImm()) {
       MachineInstr &Old = *I;
       MachineInstr *New =
-          BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::SUB16ri), MSP430::SP)
-              .addReg(MSP430::SP)
+          BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::SP)
+              .addReg(DCPU16::SP)
               .addImm(CalleeAmt);
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();
@@ -289,7 +289,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
 }
 
 void
-MSP430FrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
+DCPU16FrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                                          RegScavenger *) const {
   // Create a frame entry for the FP register that must be saved.
   if (hasFP(MF)) {
