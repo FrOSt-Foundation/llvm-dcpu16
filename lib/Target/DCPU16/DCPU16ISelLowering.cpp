@@ -47,7 +47,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(DCPU16TargetMachine &tm) :
   addRegisterClass(MVT::i16, &DCPU16::GEXR16RegClass);
 
   // Compute derived properties from the register classes
-  computeRegisterProperties(tm.getSubtargetImpl()->getRegisterInfo());
+  //computeRegisterProperties(tm.getSubtargetImpl()->getRegisterInfo());
 
   // Provide all sorts of operation actions
 
