@@ -195,7 +195,7 @@ let isBarrier = 1 in {
 let Uses = [SR] in
   def JCC : CJForm<0, 0,
                    (outs), (ins jmptarget:$dst, cc:$cc),
-                   "j$cc\t$dst",
+                   "$cc\t$dst",
                    [(DCPU16brcc bb:$dst, imm:$cc)]>;
 } // isBranch, isTerminator
 
