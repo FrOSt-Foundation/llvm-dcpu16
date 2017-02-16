@@ -16,8 +16,8 @@ def RetCC_DCPU16 : CallingConv<[
   // i8 are returned in registers R15B, R14B, R13B, R8JB
   CCIfType<[i8], CCAssignToReg<[R15B, R14B, R13B, R8JB]>>,
 
-  // i16 are returned in registers R15, R14, R13, R12
-  CCIfType<[i16], CCAssignToReg<[R15, R14, R13, R12]>>
+  // i16 are returned in registers R15, R14, R13, R8J
+  CCIfType<[i16], CCAssignToReg<[R15, R14, R13, R8J]>>
 ]>;
 
 //===----------------------------------------------------------------------===//
