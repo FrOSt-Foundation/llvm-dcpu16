@@ -1657,6 +1657,7 @@ void LLParser::ParseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'arm_aapcscc'
 ///   ::= 'arm_aapcs_vfpcc'
 ///   ::= 'msp430_intrcc'
+///   ::= 'dcpu16_instrcc'
 ///   ::= 'avr_intrcc'
 ///   ::= 'avr_signalcc'
 ///   ::= 'ptx_kernel'
@@ -1723,6 +1724,7 @@ bool LLParser::ParseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_amdgpu_ps:      CC = CallingConv::AMDGPU_PS; break;
   case lltok::kw_amdgpu_cs:      CC = CallingConv::AMDGPU_CS; break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
+  case lltok::kw_dcpu16_intrcc:  CC = CallingConv::DCPU16_INTR; break;
   case lltok::kw_cc: {
       Lex.Lex();
       return ParseUInt32(CC);

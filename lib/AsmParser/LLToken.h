@@ -133,6 +133,7 @@ enum Kind {
   kw_arm_aapcscc,
   kw_arm_aapcs_vfpcc,
   kw_msp430_intrcc,
+  kw_dcpu16_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
   kw_ptx_kernel,
