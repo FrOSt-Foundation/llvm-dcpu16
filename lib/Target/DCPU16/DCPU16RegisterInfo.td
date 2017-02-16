@@ -11,8 +11,8 @@
 //  Declarations that describe the DCPU16 register file
 //===----------------------------------------------------------------------===//
 
-class DCPU16Reg<bits<4> num, string n> : Register<n> {
-  field bits<4> Num = num;
+class DCPU16Reg<bits<5> num, string n> : Register<n> {
+  field bits<5> Num = num;
   let Namespace = "DCPU16";
 }
 
@@ -20,23 +20,28 @@ class DCPU16Reg<bits<4> num, string n> : Register<n> {
 //  Registers
 //===----------------------------------------------------------------------===//
 
-def PC  : DCPU16Reg<0,  "r0">;
-def SP  : DCPU16Reg<1,  "C">;
-def SR  : DCPU16Reg<2,  "r2">;
-def CG  : DCPU16Reg<3,  "r3">;
-def FP  : DCPU16Reg<4,  "r4">;
-def R1A  : DCPU16Reg<5,  "A">;
-def R2B  : DCPU16Reg<6,  "B">;
-def R4X  : DCPU16Reg<8,  "X">;
-def R5Y  : DCPU16Reg<9,  "Y">;
-def R6Z : DCPU16Reg<10, "Z">;
-def R7I : DCPU16Reg<11, "I">;
-def R8J : DCPU16Reg<12, "J">;
+def RA  : DCPU16Reg<0, "A">;
+def RB  : DCPU16Reg<1, "B">;
+def RC  : DCPU16Reg<2, "C">;
+def RX  : DCPU16Reg<3, "X">;
+def RY  : DCPU16Reg<4, "Y">;
+def RZ  : DCPU16Reg<5, "Z">;
+def RI  : DCPU16Reg<6, "I">;
+def RJ  : DCPU16Reg<7, "J">;
 
+def RSP : DCPU16Reg<0x1b, "SP">;
+def REX  : DCPU16Reg<0x1d, "EX">;
+
+// volatile registers
 def GR16 : RegisterClass<"DCPU16", [i16], 16,
-   // Volatile registers
-  (add R8J, R7I, R6Z, R5Y, R4X, R2B, R1A,
-   // Frame pointer, sometimes allocable
-   FP,
-   // Volatile, but not allocable
-   PC, SP, SR, CG)>;
+    (add RA, RB, RC, RX, RY, RZ, RI, RJ)>;
+
+// stack pointer register
+def SPR16 : RegisterClass<"DCPU16", [i16], 16,
+    (add RSP)>;
+
+// overflow register
+def EXR16 : RegisterClass<"DCPU16", [i16], 16,
+    (add REX)> {
+        let isAllocatable = 0;
+}

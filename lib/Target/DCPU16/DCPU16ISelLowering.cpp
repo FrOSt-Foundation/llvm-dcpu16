@@ -49,7 +49,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   // Provide all sorts of operation actions
-  setStackPointerRegisterToSaveRestore(DCPU16::SP);
+  setStackPointerRegisterToSaveRestore(DCPU16::RC);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
@@ -243,7 +243,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    DCPU16::R1A, DCPU16::R2B
+    DCPU16::RA, DCPU16::RB
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -572,7 +572,7 @@ SDValue DCPU16TargetLowering::LowerCCCCallTo(
       assert(VA.isMemLoc());
 
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::SP, PtrVT);
+        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::RC, PtrVT);
 
       SDValue PtrOff =
           DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr,
@@ -910,10 +910,10 @@ SDValue DCPU16TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
-    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::SR,
+    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::RC, //FIXME (was SR)
                                     MVT::i16, Flag);
     if (Shift)
-      // FIXME: somewhere this is turned into a SRL, lower it MSP specific?
+      // FIXME: somewhere this is turned into a SRL, lower it MRC specific?
       SR = DAG.getNode(ISD::SRA, dl, MVT::i16, SR, One);
     SR = DAG.getNode(ISD::AND, dl, MVT::i16, SR, One);
     if (Invert)
@@ -1012,7 +1012,7 @@ SDValue DCPU16TargetLowering::LowerFRAMEADDR(SDValue Op,
   SDLoc dl(Op);  // FIXME probably not meaningful
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                                         DCPU16::FP, VT);
+                                         DCPU16::RC, VT); // was FP
   while (Depth--)
     FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
                             MachinePointerInfo());
