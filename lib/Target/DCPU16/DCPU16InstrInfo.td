@@ -163,8 +163,8 @@ def NOP : Pseudo<(outs), (ins), "nop", []>;
 // FIXME: Provide proper encoding!
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def RET  : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
-                     (outs), (ins), "ret",  [(DCPU16retflag)]>;
-  def RETI : II16r<0x0, (outs), (ins), "reti", [(DCPU16retiflag)]>;
+                     (outs), (ins), "SET PC, POP",  [(DCPU16retflag)]>;
+  def RETI : II16r<0x0, (outs), (ins), "SET PC, POP", [(DCPU16retiflag)]>;
 }
 
 let isBranch = 1, isTerminator = 1 in {
@@ -175,18 +175,18 @@ let isBranch = 1, isTerminator = 1 in {
 let isBarrier = 1 in {
   // Short branch
   def JMP : CJForm<0, 0, (outs), (ins jmptarget:$dst),
-                   "jmp\t$dst",
+                   "SET\t{PC, $dst}",
                    [(br bb:$dst)]>;
   let isIndirectBranch = 1 in {
     // Long branches
     def Bi  : I16ri<0, (outs), (ins i16imm:$brdst),
-                    "br\t$brdst",
+                    "SET\t{PC, $brdst}",
                     [(brind tblockaddress:$brdst)]>;
     def Br  : I16rr<0, (outs), (ins GR16:$brdst),
-                    "br\t$brdst",
+                    "SET\t{PC, $brdst}",
                     [(brind GR16:$brdst)]>;
     def Bm  : I16rm<0, (outs), (ins memsrc:$brdst),
-                    "br\t$brdst",
+                    "SET\t{PC, $brdst}",
                     [(brind (load addr:$brdst))]>;
   }
 }
@@ -211,13 +211,13 @@ let isCall = 1 in
       Uses = [SP] in {
     def CALLi     : II16i<0x0,
                           (outs), (ins i16imm:$dst),
-                          "call\t$dst", [(DCPU16call imm:$dst)]>;
+                          "JSR\t$dst", [(DCPU16call imm:$dst)]>;
     def CALLr     : II16r<0x0,
                           (outs), (ins GR16:$dst),
-                          "call\t$dst", [(DCPU16call GR16:$dst)]>;
+                          "JSR\t$dst", [(DCPU16call GR16:$dst)]>;
     def CALLm     : II16m<0x0,
                           (outs), (ins memsrc:$dst),
-                          "call\t${dst:mem}", [(DCPU16call (load addr:$dst))]>;
+                          "JSR\t${dst:mem}", [(DCPU16call (load addr:$dst))]>;
   }
 
 
@@ -241,11 +241,11 @@ def PUSH16r  : II16r<0x0,
 let hasSideEffects = 0 in {
 def MOV8rr  : I8rr<0x0,
                    (outs GR8:$dst), (ins GR8:$src),
-                   "mov.b\t{$src, $dst}",
+                   "SET\t{$dst, $src}",
                    []>;
 def MOV16rr : I16rr<0x0,
                     (outs GR16:$dst), (ins GR16:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     []>;
 }
 
@@ -253,22 +253,22 @@ def MOV16rr : I16rr<0x0,
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def MOV8ri  : I8ri<0x0,
                    (outs GR8:$dst), (ins i8imm:$src),
-                   "mov.b\t{$src, $dst}",
+                   "SET\t{$dst, $src}",
                    [(set GR8:$dst, imm:$src)]>;
 def MOV16ri : I16ri<0x0,
                     (outs GR16:$dst), (ins i16imm:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     [(set GR16:$dst, imm:$src)]>;
 }
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
 def MOV8rm  : I8rm<0x0,
                    (outs GR8:$dst), (ins memsrc:$src),
-                   "mov.b\t{$src, $dst}",
+                   "SET\t{$dst, $src}",
                    [(set GR8:$dst, (load addr:$src))]>;
 def MOV16rm : I16rm<0x0,
                     (outs GR16:$dst), (ins memsrc:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     [(set GR16:$dst, (load addr:$src))]>;
 }
 
@@ -287,7 +287,7 @@ def MOV8rm_POST  : IForm8<0x0, DstReg, SrcPostInc, Size2Bytes,
                          "mov.b\t{@$base+, $dst}", []>;
 def MOV16rm_POST : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
                            (outs GR16:$dst, GR16:$base_wb), (ins GR16:$base),
-                           "SET\t{@$base+, $dst}", []>;
+                           "SET\t{$dst, @$base+}", []>;
 }
 
 // Any instruction that defines a 8-bit result leaves the high half of the
@@ -311,7 +311,7 @@ def MOV8mi  : I8mi<0x0,
                    [(store (i8 imm:$src), addr:$dst)]>;
 def MOV16mi : I16mi<0x0,
                     (outs), (ins memdst:$dst, i16imm:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     [(store (i16 imm:$src), addr:$dst)]>;
 
 def MOV8mr  : I8mr<0x0,
@@ -320,7 +320,7 @@ def MOV8mr  : I8mr<0x0,
                    [(store GR8:$src, addr:$dst)]>;
 def MOV16mr : I16mr<0x0,
                     (outs), (ins memdst:$dst, GR16:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     [(store GR16:$src, addr:$dst)]>;
 
 def MOV8mm  : I8mm<0x0,
@@ -329,7 +329,7 @@ def MOV8mm  : I8mm<0x0,
                    [(store (i8 (load addr:$src)), addr:$dst)]>;
 def MOV16mm : I16mm<0x0,
                     (outs), (ins memdst:$dst, memsrc:$src),
-                    "SET\t{$src, $dst}",
+                    "SET\t{$dst, $src}",
                     [(store (i16 (load addr:$src)), addr:$dst)]>;
 
 //===----------------------------------------------------------------------===//
