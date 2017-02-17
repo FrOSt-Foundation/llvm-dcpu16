@@ -33,55 +33,38 @@ using namespace llvm;
 
 // FIXME: Provide proper call frame setup / destroy opcodes.
 DCPU16RegisterInfo::DCPU16RegisterInfo()
-  : DCPU16GenRegisterInfo(DCPU16::PC) {}
+  : DCPU16GenRegisterInfo(DCPU16::RA) {}
 
 const MCPhysReg*
 DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(*MF);
-  const Function* F = MF->getFunction();
   static const MCPhysReg CalleeSavedRegs[] = {
-    DCPU16::FP, DCPU16::R1A, DCPU16::R2B, DCPU16::R7I,
-    0
+      //FIXME: Add RI when SP issue is fixed
+      DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RJ, 0
   };
   static const MCPhysReg CalleeSavedRegsFP[] = {
-    DCPU16::R1A, DCPU16::R2B, DCPU16::R7I,
-    0
-  };
-  static const MCPhysReg CalleeSavedRegsIntr[] = {
-    DCPU16::FP,  DCPU16::R1A,  DCPU16::R2B,
-    DCPU16::R4X,  DCPU16::R5Y,  DCPU16::R6Z, DCPU16::R7I,
-    DCPU16::R8J,
-    0
-  };
-  static const MCPhysReg CalleeSavedRegsIntrFP[] = {
-    DCPU16::R1A,  DCPU16::R2B,
-    DCPU16::R4X,  DCPU16::R5Y,  DCPU16::R6Z, DCPU16::R7I,
-    DCPU16::R8J,
-    0
+    //FIXME: Add RI when SP issue is fixed
+    DCPU16::RX, DCPU16::RY, DCPU16::RZ, 0
   };
 
   if (TFI->hasFP(*MF))
-    return (F->getCallingConv() == CallingConv::DCPU16_INTR ?
-            CalleeSavedRegsIntrFP : CalleeSavedRegsFP);
+    return CalleeSavedRegsFP;
   else
-    return (F->getCallingConv() == CallingConv::DCPU16_INTR ?
-            CalleeSavedRegsIntr : CalleeSavedRegs);
-
+    return CalleeSavedRegs;
 }
 
 BitVector DCPU16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);
 
-  // Mark 4 special registers with subregisters as reserved.
-  Reserved.set(DCPU16::PC);
-  Reserved.set(DCPU16::SP);
-  Reserved.set(DCPU16::SR);
-  Reserved.set(DCPU16::CG);
+  // Mark 3 special registers as reserved.
+  Reserved.set(DCPU16::REX);
+  Reserved.set(DCPU16::RSP);
+  Reserved.set(DCPU16::RI); // FIXME: remove RI when SP issue is fixed
 
   // Mark frame pointer as reserved if needed.
   if (TFI->hasFP(MF)) {
-    Reserved.set(DCPU16::FP);
+    Reserved.set(DCPU16::RJ);
   }
 
   return Reserved;
@@ -106,7 +89,7 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::FP : DCPU16::SP);
+  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RI);
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
@@ -150,5 +133,5 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 unsigned DCPU16RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? DCPU16::FP : DCPU16::SP;
+  return TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RI;
 }

@@ -49,7 +49,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   // Provide all sorts of operation actions
-  setStackPointerRegisterToSaveRestore(DCPU16::SP);
+  setStackPointerRegisterToSaveRestore(DCPU16::RI);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
@@ -243,7 +243,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    DCPU16::R1A, DCPU16::R2B
+    DCPU16::RA, DCPU16::RB, DCPU16::RC
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -572,7 +572,7 @@ SDValue DCPU16TargetLowering::LowerCCCCallTo(
       assert(VA.isMemLoc());
 
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::SP, PtrVT);
+        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::RI, PtrVT);
 
       SDValue PtrOff =
           DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr,
@@ -886,31 +886,31 @@ SDValue DCPU16TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     Convert = false;
     break;
    case DCPU16CC::COND_HS:
-     // Res = SR & 1, no processing is required
+     // Res = REX & 1, no processing is required
      break;
    case DCPU16CC::COND_LO:
-     // Res = ~(SR & 1)
+     // Res = ~(REX & 1)
      Invert = true;
      break;
    case DCPU16CC::COND_NE:
      if (andCC) {
-       // C = ~Z, thus Res = SR & 1, no processing is required
+       // C = ~Z, thus Res = REX & 1, no processing is required
      } else {
-       // Res = ~((SR >> 1) & 1)
+       // Res = ~((REX >> 1) & 1)
        Shift = true;
        Invert = true;
      }
      break;
    case DCPU16CC::COND_E:
      Shift = true;
-     // C = ~Z for AND instruction, thus we can put Res = ~(SR & 1), however,
-     // Res = (SR >> 1) & 1 is 1 word shorter.
+     // C = ~Z for AND instruction, thus we can put Res = ~(REX & 1), however,
+     // Res = (REX >> 1) & 1 is 1 word shorter.
      break;
   }
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
-    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::SR,
+    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::REX,
                                     MVT::i16, Flag);
     if (Shift)
       // FIXME: somewhere this is turned into a SRL, lower it MSP specific?
@@ -1012,7 +1012,7 @@ SDValue DCPU16TargetLowering::LowerFRAMEADDR(SDValue Op,
   SDLoc dl(Op);  // FIXME probably not meaningful
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                                         DCPU16::FP, VT);
+                                         DCPU16::RJ, VT);
   while (Depth--)
     FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
                             MachinePointerInfo());

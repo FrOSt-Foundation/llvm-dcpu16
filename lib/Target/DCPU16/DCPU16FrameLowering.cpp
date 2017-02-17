@@ -27,10 +27,10 @@
 using namespace llvm;
 
 bool DCPU16FrameLowering::hasFP(const MachineFunction &MF) const {
-    const MachineFrameInfo *MFI = MF.getFrameInfo();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
     return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-            MF.getFrameInfo()->hasVarSizedObjects() ||
-            MFI->isFrameAddressTaken());
+            MF.getFrameInfo().hasVarSizedObjects() ||
+            MFI.isFrameAddressTaken());
 }
 
 bool DCPU16FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
@@ -62,18 +62,18 @@ void DCPU16FrameLowering::emitPrologue(MachineFunction &MF,
     // Update the frame offset adjustment.
     MFI.setOffsetAdjustment(-NumBytes);
 
-    // Save FP into the appropriate stack slot...
+    // Save RJ into the appropriate stack slot...
     BuildMI(MBB, MBBI, DL, TII.get(DCPU16::PUSH16r))
-      .addReg(DCPU16::FP, RegState::Kill);
+      .addReg(DCPU16::RJ, RegState::Kill);
 
-    // Update FP with the new base value...
-    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::MOV16rr), DCPU16::FP)
-      .addReg(DCPU16::SP);
+    // Update RJ with the new base value...
+    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::MOV16rr), DCPU16::RJ)
+      .addReg(DCPU16::RI);
 
     // Mark the FramePtr as live-in in every block except the entry.
     for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
          I != E; ++I)
-      I->addLiveIn(DCPU16::FP);
+      I->addLiveIn(DCPU16::RJ);
 
   } else
     NumBytes = StackSize - DCPU16FI->getCalleeSavedFrameSize();
@@ -85,18 +85,18 @@ void DCPU16FrameLowering::emitPrologue(MachineFunction &MF,
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
 
-  if (NumBytes) { // adjust stack pointer: SP -= numbytes
-    // If there is an SUB16ri of SP immediately before this instruction, merge
+  if (NumBytes) { // adjust stack pointer: RI -= numbytes
+    // If there is an SUB16ri of RI immediately before this instruction, merge
     // the two.
     //NumBytes -= mergeSPUpdates(MBB, MBBI, true);
-    // If there is an ADD16ri or SUB16ri of SP immediately after this
+    // If there is an ADD16ri or SUB16ri of RI immediately after this
     // instruction, merge the two instructions.
     // mergeSPUpdatesDown(MBB, MBBI, &NumBytes);
 
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::SUB16ri), DCPU16::SP)
-        .addReg(DCPU16::SP).addImm(NumBytes);
+        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::SUB16ri), DCPU16::RI)
+        .addReg(DCPU16::RI).addImm(NumBytes);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -131,8 +131,8 @@ void DCPU16FrameLowering::emitEpilogue(MachineFunction &MF,
     uint64_t FrameSize = StackSize - 2;
     NumBytes = FrameSize - CSSize;
 
-    // pop FP.
-    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::POP16r), DCPU16::FP);
+    // pop JJ.
+    BuildMI(MBB, MBBI, DL, TII.get(DCPU16::POP16r), DCPU16::RJ);
   } else
     NumBytes = StackSize - CSSize;
 
@@ -147,19 +147,19 @@ void DCPU16FrameLowering::emitEpilogue(MachineFunction &MF,
 
   DL = MBBI->getDebugLoc();
 
-  // If there is an ADD16ri or SUB16ri of SP immediately before this
+  // If there is an ADD16ri or SUB16ri of RI immediately before this
   // instruction, merge the two instructions.
   //if (NumBytes || MFI.hasVarSizedObjects())
   //  mergeSPUpdatesUp(MBB, MBBI, StackPtr, &NumBytes);
 
   if (MFI.hasVarSizedObjects()) {
     BuildMI(MBB, MBBI, DL,
-            TII.get(DCPU16::MOV16rr), DCPU16::SP).addReg(DCPU16::FP);
+            TII.get(DCPU16::MOV16rr), DCPU16::RI).addReg(DCPU16::RJ);
     if (CSSize) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL,
-                TII.get(DCPU16::SUB16ri), DCPU16::SP)
-        .addReg(DCPU16::SP).addImm(CSSize);
+                TII.get(DCPU16::SUB16ri), DCPU16::RI)
+        .addReg(DCPU16::RI).addImm(CSSize);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -167,8 +167,8 @@ void DCPU16FrameLowering::emitEpilogue(MachineFunction &MF,
     // adjust stack pointer back: SP += numbytes
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::ADD16ri), DCPU16::SP)
-        .addReg(DCPU16::SP).addImm(NumBytes);
+        BuildMI(MBB, MBBI, DL, TII.get(DCPU16::ADD16ri), DCPU16::RI)
+        .addReg(DCPU16::RI).addImm(NumBytes);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -231,8 +231,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
 
   if (!hasReservedCallFrame(MF)) {
     // If the stack pointer can be changed after prologue, turn the
-    // adjcallstackup instruction into a 'sub SP, <amt>' and the
-    // adjcallstackdown instruction into 'add SP, <amt>'
+    // adjcallstackup instruction into a 'sub RI, <amt>' and the
+    // adjcallstackdown instruction into 'add RI, <amt>'
     // TODO: consider using push / pop instead of sub + store / add
     MachineInstr &Old = *I;
     uint64_t Amount = Old.getOperand(0).getImm();
@@ -245,8 +245,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
       MachineInstr *New = nullptr;
       if (Old.getOpcode() == TII.getCallFrameSetupOpcode()) {
         New =
-            BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::SP)
-                .addReg(DCPU16::SP)
+            BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::RI)
+                .addReg(DCPU16::RI)
                 .addImm(Amount);
       } else {
         assert(Old.getOpcode() == TII.getCallFrameDestroyOpcode());
@@ -255,8 +255,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
         Amount -= CalleeAmt;
         if (Amount)
           New = BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::ADD16ri),
-                        DCPU16::SP)
-                    .addReg(DCPU16::SP)
+                        DCPU16::RI)
+                    .addReg(DCPU16::RI)
                     .addImm(Amount);
       }
 
@@ -274,8 +274,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
     if (uint64_t CalleeAmt = I->getOperand(1).getImm()) {
       MachineInstr &Old = *I;
       MachineInstr *New =
-          BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::SP)
-              .addReg(DCPU16::SP)
+          BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::RI)
+              .addReg(DCPU16::RI)
               .addImm(CalleeAmt);
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();
@@ -290,7 +290,7 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
 void
 DCPU16FrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                                          RegScavenger *) const {
-  // Create a frame entry for the FP register that must be saved.
+  // Create a frame entry for the RJ register that must be saved.
   if (hasFP(MF)) {
     int FrameIdx = MF.getFrameInfo().CreateFixedObject(2, -4, true);
     (void)FrameIdx;
