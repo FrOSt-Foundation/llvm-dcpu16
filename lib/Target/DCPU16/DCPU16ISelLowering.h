@@ -73,7 +73,7 @@ namespace llvm {
                                   const DCPU16Subtarget &STI);
 
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
-      return MVT::i8;
+      return MVT::i16;
     }
 
     /// LowerOperation - Provide custom lowering hooks for some operations.
