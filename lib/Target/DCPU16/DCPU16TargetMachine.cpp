@@ -65,7 +65,6 @@ public:
   }
 
   bool addInstSelector() override;
-  void addPreEmitPass() override;
 };
 } // namespace
 
@@ -77,9 +76,4 @@ bool DCPU16PassConfig::addInstSelector() {
   // Install an instruction selector.
   addPass(createDCPU16ISelDag(getDCPU16TargetMachine(), getOptLevel()));
   return false;
-}
-
-void DCPU16PassConfig::addPreEmitPass() {
-  // Must run branch selection immediately preceding the asm printer.
-  addPass(createDCPU16BranchSelectionPass(), false);
 }
