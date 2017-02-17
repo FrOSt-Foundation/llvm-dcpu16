@@ -44,7 +44,7 @@ DCPU16TargetMachine::DCPU16TargetMachine(const Target &T, const Triple &TT,
     // p:16:16:16 -> size ptr 16bits, 16bits abi, 16bits pref alignment
     // i16:16:16 -> integers of size 16 alignment (16 abi, 16 pref alignment)
     // a:16:16 -> aggregate type abi & pref alignment
-    : LLVMTargetMachine(T, "e-m:e-p:16:16:16-i16:16:16-a:16:16-n16", TT, CPU, FS,
+    : LLVMTargetMachine(T, "e-m:e-p:16:16:16-i8:16:16-i16:16:16-i32:16:32-s0:16:16-a:16:16-n16", TT, CPU, FS,
                         Options, getEffectiveRelocModel(RM), CM, OL),
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
