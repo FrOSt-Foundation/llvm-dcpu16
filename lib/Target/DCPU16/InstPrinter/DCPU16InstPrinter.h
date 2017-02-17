@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_DCPU16_INSTPRINTER_DCPU16INSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
   class DCPU16InstPrinter : public MCInstPrinter {
@@ -36,7 +37,6 @@ namespace llvm {
     void printSrcMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                             const char *Modifier = nullptr);
     void printCCOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-
   };
 }
 
