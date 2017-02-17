@@ -86,10 +86,11 @@ void DCPU16InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
           O << "0x";
           O.write_hex(Disp.getImm() & 0xFFFF);
       }
-  } else if (Base.getRed()) {
+  } else if (Base.getReg()) {
       if (Disp.isImm() && Disp.getImm() != 0) {
           O << "0x";
           O.write_hex(Disp.getImm() & 0xFFFF);
+          O << "+";
       }
       O << getRegisterName(Base.getReg());
   }
