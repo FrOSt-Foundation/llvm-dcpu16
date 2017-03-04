@@ -111,8 +111,6 @@ namespace {
 
   private:
     void Select(SDNode *N) override;
-    bool tryIndexedLoad(SDNode *Op);
-    bool tryIndexedBinOp(SDNode *Op, SDValue N1, SDValue N2, unsigned Opc16);
 
     bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Disp);
   };
@@ -294,78 +292,6 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   OutOps.push_back(Op1);
   return false;
 }
-
-static bool isValidIndexedLoad(const LoadSDNode *LD) {
-  ISD::MemIndexedMode AM = LD->getAddressingMode();
-  if (AM != ISD::POST_INC || LD->getExtensionType() != ISD::NON_EXTLOAD)
-    return false;
-
-  EVT VT = LD->getMemoryVT();
-
-  switch (VT.getSimpleVT().SimpleTy) {
-  case MVT::i16:
-    // Sanity check
-    if (cast<ConstantSDNode>(LD->getOffset())->getZExtValue() != 2)
-      return false;
-
-    break;
-  default:
-    return false;
-  }
-
-  return true;
-}
-
-//TODO: do we still need this? Only i16 indexes are allowed
-bool DCPU16DAGToDAGISel::tryIndexedLoad(SDNode *N) {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  if (!isValidIndexedLoad(LD))
-    return false;
-
-  MVT VT = LD->getMemoryVT().getSimpleVT();
-
-  unsigned Opcode = 0;
-  switch (VT.SimpleTy) {
-  case MVT::i16:
-    Opcode = DCPU16::MOV16rm_POST;
-    break;
-  default:
-    return false;
-  }
-
-  ReplaceNode(N,
-              CurDAG->getMachineNode(Opcode, SDLoc(N), VT, MVT::i16, MVT::Other,
-                                     LD->getBasePtr(), LD->getChain()));
-  return true;
-}
-
-bool DCPU16DAGToDAGISel::tryIndexedBinOp(SDNode *Op, SDValue N1, SDValue N2,
-                                         unsigned Opc16) {
-  if (N1.getOpcode() == ISD::LOAD &&
-      N1.hasOneUse() &&
-      IsLegalToFold(N1, Op, Op, OptLevel)) {
-    LoadSDNode *LD = cast<LoadSDNode>(N1);
-    if (!isValidIndexedLoad(LD))
-      return false;
-
-    MVT VT = LD->getMemoryVT().getSimpleVT();
-    unsigned Opc = Opc16;
-    MachineSDNode::mmo_iterator MemRefs0 = MF->allocateMemRefsArray(1);
-    MemRefs0[0] = cast<MemSDNode>(N1)->getMemOperand();
-    SDValue Ops0[] = { N2, LD->getBasePtr(), LD->getChain() };
-    SDNode *ResNode =
-      CurDAG->SelectNodeTo(Op, Opc, VT, MVT::i16, MVT::Other, Ops0);
-    cast<MachineSDNode>(ResNode)->setMemRefs(MemRefs0, MemRefs0 + 1);
-    // Transfer chain.
-    ReplaceUses(SDValue(N1.getNode(), 2), SDValue(ResNode, 2));
-    // Transfer writeback.
-    ReplaceUses(SDValue(N1.getNode(), 1), SDValue(ResNode, 1));
-    return true;
-  }
-
-  return false;
-}
-
 
 void DCPU16DAGToDAGISel::Select(SDNode *Node) {
   SDLoc dl(Node);

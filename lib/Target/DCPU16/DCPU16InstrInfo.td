@@ -260,332 +260,6 @@ def MOV16mm : I16mm<0x0,
                     [(store (i16 (load addr:$src)), addr:$dst)]>;
 
 //===----------------------------------------------------------------------===//
-// Arithmetic Instructions
-
-let Constraints = "$src = $dst" in {
-
-let Defs = [REX] in {
-
-let isCommutable = 1 in { // X = ADD Y, Z  == X = ADD Z, Y
-
-def ADD16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "ADD\t{$dst, $src2}",
-                    [(set GR16:$dst, (add GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-}
-
-def ADD16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "ADD\t{$dst, $src2}",
-                    [(set GR16:$dst, (add GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-def ADD16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "ADD\t{$dst, $src2}",
-                    [(set GR16:$dst, (add GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def ADD16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "ADD\t{$dst, $src}",
-                    [(store (add (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def ADD16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "ADD\t{$dst, $src}",
-                    [(store (add (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def ADD16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "ADD\t{$dst, $src}",
-                    [(store (add (load addr:$dst), 
-                                  (i16 (load addr:$src))), addr:$dst),
-                     (implicit REX)]>;
-
-}
-
-let Uses = [REX] in {
-
-let isCommutable = 1 in { // X = ADDC Y, Z  == X = ADDC Z, Y
-def ADC16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "addc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (adde GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-} // isCommutable
-
-def ADC16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "addc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (adde GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-def ADC16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "addc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (adde GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def ADC16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "addc.w\t{$src, $dst}",
-                    [(store (adde (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def ADC16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "addc.w\t{$src, $dst}",
-                    [(store (adde (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def ADC16mm : I8mm<0x0,
-                   (outs), (ins memdst:$dst, memsrc:$src),
-                   "addc.w\t{$src, $dst}",
-                   [(store (adde (load addr:$dst), 
-                                 (i16 (load addr:$src))), addr:$dst),
-                    (implicit REX)]>;
-
-}
-} // Uses = [REX]
-
-let isCommutable = 1 in { // X = AND Y, Z  == X = AND Z, Y
-def AND16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "AND\t{$dst, $src2}",
-                    [(set GR16:$dst, (and GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-}
-
-def AND16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "AND\t{$dst, $src2}",
-                    [(set GR16:$dst, (and GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-def AND16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "AND\t{$dst, $src2}",
-                    [(set GR16:$dst, (and GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def AND16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "AND\t{$dst, $src}",
-                    [(store (and (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def AND16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "AND\t{$dst, $src}",
-                    [(store (and (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def AND16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "AND\t{$dst, $src}",
-                    [(store (and (load addr:$dst), 
-                                 (i16 (load addr:$src))), addr:$dst),
-                     (implicit REX)]>;
-
-}
-
-let isCommutable = 1 in { // X = OR Y, Z  == X = OR Z, Y
-def OR16rr : I16rr<0x0,
-                   (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                   "BOR\t{$dst, $src2}",
-                   [(set GR16:$dst, (or GR16:$src, GR16:$src2))]>;
-}
-
-def OR16ri : I16ri<0x0,
-                   (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                   "BOR\t{$dst, $src2}",
-                   [(set GR16:$dst, (or GR16:$src, imm:$src2))]>;
-
-def OR16rm : I16rm<0x0,
-                   (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                   "BOR\t{$dst, $src2}",
-                   [(set GR16:$dst, (or GR16:$src, (load addr:$src2)))]>;
-
-let Constraints = "" in {
-
-def OR16mr : I16mr<0x0,
-                   (outs), (ins memdst:$dst, GR16:$src),
-                   "BOR\t{$dst, $src}",
-                   [(store (or (load addr:$dst), GR16:$src), addr:$dst)]>;
-
-def OR16mi : I16mi<0x0,
-                   (outs), (ins memdst:$dst, i16imm:$src),
-                   "BOR\t{$dst, $src}",
-                   [(store (or (load addr:$dst), (i16 imm:$src)), addr:$dst)]>;
-
-def OR16mm : I16mm<0x0,
-                   (outs), (ins memdst:$dst, memsrc:$src),
-                   "BOR\t{$dst, $src}",
-                   [(store (or (i16 (load addr:$dst)),
-                               (i16 (load addr:$src))), addr:$dst)]>;
-
-}
-
-let isCommutable = 1 in { // X = XOR Y, Z  == X = XOR Z, Y
-def XOR16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "XOR\t{$dst, $src2}",
-                    [(set GR16:$dst, (xor GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-}
-
-def XOR16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "XOR\t{$dst, $src2}",
-                    [(set GR16:$dst, (xor GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-def XOR16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "XOR\t{$dst, $src2}",
-                    [(set GR16:$dst, (xor GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def XOR16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "XOR\t{$dst, $src}",
-                    [(store (xor (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def XOR16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "XOR\t{$dst, $src}",
-                    [(store (xor (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def XOR16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "XOR\t{$dst, $src}",
-                    [(store (xor (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-                     (implicit REX)]>;
-
-}
-
-def SUB16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "SUB\t{$dst, $src2}",
-                    [(set GR16:$dst, (sub GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-
-def SUB16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "SUB\t{$dst, $src2}",
-                    [(set GR16:$dst, (sub GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-def SUB16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "SUB\t{$dst, $src2}",
-                    [(set GR16:$dst, (sub GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def SUB16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "SUB\t{$dst, $src}",
-                    [(store (sub (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def SUB16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "SUB\t{$dst, $src}",
-                    [(store (sub (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def SUB16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "SUB\t{$dst, $src}",
-                    [(store (sub (load addr:$dst), 
-                                 (i16 (load addr:$src))), addr:$dst),
-                     (implicit REX)]>;
-
-}
-
-let Uses = [REX] in {
-def SBC16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "subc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (sube GR16:$src, GR16:$src2)),
-                     (implicit REX)]>;
-
-def SBC16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
-                    "subc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (sube GR16:$src, imm:$src2)),
-                     (implicit REX)]>;
-
-def SBC16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
-                    "subc.w\t{$src2, $dst}",
-                    [(set GR16:$dst, (sube GR16:$src, (load addr:$src2))),
-                     (implicit REX)]>;
-
-let Constraints = "" in {
-
-def SBC16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "subc.w\t{$src, $dst}",
-                    [(store (sube (load addr:$dst), GR16:$src), addr:$dst),
-                     (implicit REX)]>;
-
-def SBC16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "subc.w\t{$src, $dst}",
-                    [(store (sube (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                     (implicit REX)]>;
-
-def SBC16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "subc.w\t{$src, $dst}",
-                    [(store (sube (load addr:$dst),
-                            (i16 (load addr:$src))), addr:$dst),
-                     (implicit REX)]>;
-
-}
-
-} // Uses = [REX]
-
-// FIXME: memory variant!
-def SAR16r1 : II16r<0x0,
-                    (outs GR16:$dst), (ins GR16:$src),
-                    "rra.w\t$dst",
-                    [(set GR16:$dst, (DCPU16rra GR16:$src)),
-                     (implicit REX)]>;
-
-def SHL16r1 : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src),
-                    "rla.w\t$dst",
-                    [(set GR16:$dst, (DCPU16rla GR16:$src)),
-                     (implicit REX)]>;
-
-def SAR16r1c : Pseudo<(outs GR16:$dst), (ins GR16:$src),
-                      "clrc\n\t"
-                      "rrc.w\t$dst",
-                      [(set GR16:$dst, (DCPU16rrc GR16:$src)),
-                       (implicit REX)]>;
-
-} // Defs = [REX]
-
-} // Constraints = "$src = $dst"
-
 // Integer comparisons
 let Defs = [REX] in {
 def CMP16rr : I16rr<0x0,
@@ -765,3 +439,92 @@ def MUL16mm : I16mm<0x0,
                     "MUL\t{$dst, $src}",
                     [(store (mul (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
                     (implicit REX)]>;
+
+
+//===----------------------------------------------------------------------===//
+// Multiclass for instructions
+
+multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
+    let Constraints = "$src = $dst", isCommutable = 1 in {
+        def rr: I16rr<OpVal, 
+                        (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                        OpcStr#"\t{$dst, $src2}",
+                        [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
+                        (implicit EX)]>;
+    }
+}
+
+multiclass BASIC_RR_NON_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
+    let Constraints = "$src = $dst" in {
+        def rr: i16rr<OpVal,
+                        (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                        OpcStr#"\t{$dst, $src2}",
+                        [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
+                        (implicit EX)]>;
+    }
+}
+
+multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
+    let Constraints = "$src = $dst" in {
+        def rm: I16rm<OpVal,
+                        (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
+                        OpcStr#"\t{$dst, $src2}",
+                        [(set GR16:$dst, (OpNode GR16:$src, (load addr:$src2))),
+                        (implicit EX)]>;
+
+        def ri: I16ri<OpVal,
+                        (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
+                        OpcStr#"\t{$dst, $src2}",
+                        [(set GR16:$dst, (OpNode GR16:$src, imm:$src2)),
+                        (implicit EX)]>;
+    }
+
+    let Constraints = "" in {
+        def mr: I16mr<OpVal,
+                        (outs), (ins memdst:$dst, GR16:$src)
+                        OpcStr#"\t{$dst, $src}",
+                        [(store (OpNode (load addr:$dst), GR16:$src), addr:$dst),
+                        (implicit EX)]>;
+
+        def mi: I16mi<OpVal,
+                        (outs), (ins memdst:$dst, i16imm:$src),
+                        OpcStr#"\t{$dst, $src}",
+                        [(store (OpNode (load addr:$dst), (i16 imm:$src)), addr:$dst),
+                        (implicit EX)]>;
+
+        def mm: I16mm<OpVal,
+                        (outs), (ins memdst:$dst, memsrc:$src),
+                        OpcStr#"\t{$dst, $src}",
+                        [(store (OpNode (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
+                        (implicit EX)]>;
+    }
+
+    //FIXME: wrong zero extend
+    let Constraints = "$src = $dst", canFoldAsLoad = 1, isReMaterializable = 1 in {
+        def rmi8: i16rm<OpVal,
+                        (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
+                        OpcStr#"\t{$dst, $src}",
+                        [(set GR16:$dst, (OpNode GR16:$src, (zextloadi8 addr:$src2))),
+                        (implicit EX)]>;
+    }
+}
+
+//===------------------------------------------------------------------------===//
+//Instructions
+
+let Defs = [EX] in {
+    defm ADD16 : BASIC_RR_IS_COM<0x0, "ADD", add>, BASIC_NORMAL<OxO, "ADD", add>;
+    defm AND16 : BASIC_RR_IS_COM<0x0, "AND", and>, BASIC_NORMAL<0x0, "AND", and>;
+    defm OR16  : BASIC_RR_IS_COM<0x0, "BOR", or>, BASIC_NORMAL<0x0, "BOR", or>;
+    defm XOR16 : BASIC_RR_IS_COM<0x0, "XOR", xor>, BASIC_NORMAL<0x0, "XOR", xor>;
+    defm SUB16 : BASIC_RR_NON_COM<0x0, "SUB", sub>, BASIC_NORMAL<0x0, "SUB", sub>;
+    defm MUL16 : BASIC_RR_NON_COM<0x0, "MUL", mul>, BASIC_NORMAL<0x0, "MUL", mul>;
+    defm SLR16 : BASIC_RR_NON_COM<0x0, "SHR", srl>, BASIC_NORMAL<0x0, "SHR", slr>;
+    defm SRA16 : BASIC_RR_NON_COM<0x0, "SHR", sra>, BASIC_NORMAL<0x0, "SHR", sra>;
+    defm SHL16 : BASIC_RR_NON_COM<0x0, "SHL", shl>, BASIC_NORMAL<0x0, "SHL", shl>;
+
+    let Uses = [EX] in {
+        defm ADC16 : BASIC_RR_IS_COM<0x0, "addc.w", adde>, BASIC_NORMAL<0x0, "addc.w", adde>;
+        defm SBC16 : BASIC_RR_NON_COM<0x0, "subc.w", sube>, BASIC_NORMAL<0x0, "subc.w", sube>;
+    }
+}
