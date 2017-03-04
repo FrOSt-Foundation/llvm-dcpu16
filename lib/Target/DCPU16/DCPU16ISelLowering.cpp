@@ -53,10 +53,6 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
-  // We have post-incremented loads / stores.
-  setIndexedLoadAction(ISD::POST_INC, MVT::i8, Promote);
-  setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
-
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD,  VT, MVT::i1,  Promote);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
@@ -1043,40 +1039,6 @@ SDValue DCPU16TargetLowering::LowerJumpTable(SDValue Op,
     auto PtrVT = getPointerTy(DAG.getDataLayout());
     SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT);
     return DAG.getNode(DCPU16ISD::Wrapper, SDLoc(JT), PtrVT, Result);
-}
-
-/// getPostIndexedAddressParts - returns true by value, base pointer and
-/// offset pointer and addressing mode by reference if this node can be
-/// combined with a load / store to form a post-indexed load / store.
-bool DCPU16TargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
-                                                      SDValue &Base,
-                                                      SDValue &Offset,
-                                                      ISD::MemIndexedMode &AM,
-                                                      SelectionDAG &DAG) const {
-
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  if (LD->getExtensionType() != ISD::NON_EXTLOAD)
-    return false;
-
-  EVT VT = LD->getMemoryVT();
-  if (VT != MVT::i16)
-    return false;
-
-  if (Op->getOpcode() != ISD::ADD)
-    return false;
-
-  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1))) {
-    uint64_t RHSC = RHS->getZExtValue();
-    if (VT == MVT::i16 && RHSC != 2)
-      return false;
-
-    Base = Op->getOperand(0);
-    Offset = DAG.getConstant(RHSC, SDLoc(N), VT);
-    AM = ISD::POST_INC;
-    return true;
-  }
-
-  return false;
 }
 
 const char *DCPU16TargetLowering::getTargetNodeName(unsigned Opcode) const {
