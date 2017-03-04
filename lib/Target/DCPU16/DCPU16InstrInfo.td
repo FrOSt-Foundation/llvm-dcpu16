@@ -518,7 +518,7 @@ let Defs = [EX] in {
     defm OR16  : BASIC_RR_IS_COM<0x0, "BOR", or>, BASIC_NORMAL<0x0, "BOR", or>;
     defm XOR16 : BASIC_RR_IS_COM<0x0, "XOR", xor>, BASIC_NORMAL<0x0, "XOR", xor>;
     defm SUB16 : BASIC_RR_NON_COM<0x0, "SUB", sub>, BASIC_NORMAL<0x0, "SUB", sub>;
-    defm MUL16 : BASIC_RR_NON_COM<0x0, "MUL", mul>, BASIC_NORMAL<0x0, "MUL", mul>;
+    defm MUL16 : BASIC_RR_IS_COM<0x0, "MUL", mul>, BASIC_NORMAL<0x0, "MUL", mul>;
     defm SLR16 : BASIC_RR_NON_COM<0x0, "SHR", srl>, BASIC_NORMAL<0x0, "SHR", slr>;
     defm SRA16 : BASIC_RR_NON_COM<0x0, "SHR", sra>, BASIC_NORMAL<0x0, "SHR", sra>;
     defm SHL16 : BASIC_RR_NON_COM<0x0, "SHL", shl>, BASIC_NORMAL<0x0, "SHL", shl>;
