@@ -354,94 +354,6 @@ def BIT16mm : I16mm<0x0,
 } // Defs = [REX]
 
 //===----------------------------------------------------------------------===//
-// Non-Instruction Patterns
-
-// GlobalAddress, ExternalSymbol
-def : Pat<(i16 (DCPU16Wrapper tglobaladdr:$dst)), (MOV16ri tglobaladdr:$dst)>;
-def : Pat<(i16 (DCPU16Wrapper texternalsym:$dst)), (MOV16ri texternalsym:$dst)>;
-def : Pat<(i16 (DCPU16Wrapper tblockaddress:$dst)), (MOV16ri tblockaddress:$dst)>;
-
-def : Pat<(add GR16:$src, (DCPU16Wrapper tglobaladdr :$src2)),
-          (ADD16ri GR16:$src, tglobaladdr:$src2)>;
-def : Pat<(add GR16:$src, (DCPU16Wrapper texternalsym:$src2)),
-          (ADD16ri GR16:$src, texternalsym:$src2)>;
-def : Pat<(add GR16:$src, (DCPU16Wrapper tblockaddress:$src2)),
-          (ADD16ri GR16:$src, tblockaddress:$src2)>;
-
-def : Pat<(store (i16 (DCPU16Wrapper tglobaladdr:$src)), addr:$dst),
-          (MOV16mi addr:$dst, tglobaladdr:$src)>;
-def : Pat<(store (i16 (DCPU16Wrapper texternalsym:$src)), addr:$dst),
-          (MOV16mi addr:$dst, texternalsym:$src)>;
-def : Pat<(store (i16 (DCPU16Wrapper tblockaddress:$src)), addr:$dst),
-          (MOV16mi addr:$dst, tblockaddress:$src)>;
-
-// calls
-def : Pat<(DCPU16call (i16 tglobaladdr:$dst)),
-          (CALLi tglobaladdr:$dst)>;
-def : Pat<(DCPU16call (i16 texternalsym:$dst)),
-          (CALLi texternalsym:$dst)>;
-
-// add and sub always produce carry
-def : Pat<(addc GR16:$src, GR16:$src2),
-          (ADD16rr GR16:$src, GR16:$src2)>;
-def : Pat<(addc GR16:$src, (load addr:$src2)),
-          (ADD16rm GR16:$src, addr:$src2)>;
-def : Pat<(addc GR16:$src, imm:$src2),
-          (ADD16ri GR16:$src, imm:$src2)>;
-def : Pat<(store (addc (load addr:$dst), GR16:$src), addr:$dst),
-          (ADD16mr addr:$dst, GR16:$src)>;
-def : Pat<(store (addc (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-          (ADD16mm addr:$dst, addr:$src)>;
-
-def : Pat<(subc GR16:$src, GR16:$src2),
-          (SUB16rr GR16:$src, GR16:$src2)>;
-def : Pat<(subc GR16:$src, (load addr:$src2)),
-          (SUB16rm GR16:$src, addr:$src2)>;
-def : Pat<(subc GR16:$src, imm:$src2),
-          (SUB16ri GR16:$src, imm:$src2)>;
-def : Pat<(store (subc (load addr:$dst), GR16:$src), addr:$dst),
-          (SUB16mr addr:$dst, GR16:$src)>;
-def : Pat<(store (subc (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-          (SUB16mm addr:$dst, addr:$src)>;
-
-def MUL16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "MUL\t{$dst, $src2}",
-                    [(set GR16:$dst, (mul GR16:$src, GR16:$src2)),
-                    (implicit REX)]>;
-
-def MUL16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "MUL\t{$dst, $src2}",
-                    [(set GR16:$dst, (mul GR16:$src, imm:$src2)),
-                    (implicit REX)]>;
-
-def MUL16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
-                    "MUL\t{$dst, $src2}",
-                    [(set GR16:$dst, (mul GR16:$src, (load addr:$src2))),
-                    (implicit REX)]>;
-
-def MUL16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
-                    "MUL\t{$dst, $src}",
-                    [(store (mul (load addr:$dst), GR16:$src), addr:$dst),
-                    (implicit REX)]>;
-
-def MUL16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "MUL\t{$dst, $src}",
-                    [(store (mul (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                    (implicit REX)]>;
-
-def MUL16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "MUL\t{$dst, $src}",
-                    [(store (mul (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-                    (implicit REX)]>;
-
-
-//===----------------------------------------------------------------------===//
 // Multiclass for instructions
 
 multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
@@ -450,17 +362,17 @@ multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
     }
 }
 
 multiclass BASIC_RR_NON_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
     let Constraints = "$src = $dst" in {
-        def rr: i16rr<OpVal,
+        def rr: I16rr<OpVal,
                         (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
     }
 }
 
@@ -470,50 +382,50 @@ multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, (load addr:$src2))),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
 
         def ri: I16ri<OpVal,
                         (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, imm:$src2)),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
     }
 
     let Constraints = "" in {
         def mr: I16mr<OpVal,
-                        (outs), (ins memdst:$dst, GR16:$src)
+                        (outs), (ins memdst:$dst, GR16:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), GR16:$src), addr:$dst),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
 
         def mi: I16mi<OpVal,
                         (outs), (ins memdst:$dst, i16imm:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
 
         def mm: I16mm<OpVal,
                         (outs), (ins memdst:$dst, memsrc:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
     }
 
     //FIXME: wrong zero extend
     let Constraints = "$src = $dst", canFoldAsLoad = 1, isReMaterializable = 1 in {
-        def rmi8: i16rm<OpVal,
+        def rmi8: I16rm<OpVal,
                         (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
                         OpcStr#"\t{$dst, $src}",
                         [(set GR16:$dst, (OpNode GR16:$src, (zextloadi8 addr:$src2))),
-                        (implicit EX)]>;
+                        (implicit REX)]>;
     }
 }
 
 //===------------------------------------------------------------------------===//
 //Instructions
 
-let Defs = [EX] in {
-    defm ADD16 : BASIC_RR_IS_COM<0x0, "ADD", add>, BASIC_NORMAL<OxO, "ADD", add>;
+let Defs = [REX] in {
+    defm ADD16 : BASIC_RR_IS_COM<0x0, "ADD", add>, BASIC_NORMAL<0x0, "ADD", add>;
     defm AND16 : BASIC_RR_IS_COM<0x0, "AND", and>, BASIC_NORMAL<0x0, "AND", and>;
     defm OR16  : BASIC_RR_IS_COM<0x0, "BOR", or>, BASIC_NORMAL<0x0, "BOR", or>;
     defm XOR16 : BASIC_RR_IS_COM<0x0, "XOR", xor>, BASIC_NORMAL<0x0, "XOR", xor>;
@@ -521,11 +433,11 @@ let Defs = [EX] in {
     defm MUL16 : BASIC_RR_IS_COM<0x0, "MUL", mul>, BASIC_NORMAL<0x0, "MUL", mul>;
     defm DIV16 : BASIC_RR_NON_COM<0x0, "DIV", udiv>, BASIC_NORMAL<0x0, "DIV", udiv>;
     defm MOD16 : BASIC_RR_NON_COM<0x0, "MOD", urem>, BASIC_NORMAL<0x0, "MOD", urem>;
-    defm SLR16 : BASIC_RR_NON_COM<0x0, "SHR", srl>, BASIC_NORMAL<0x0, "SHR", slr>;
+    defm SLR16 : BASIC_RR_NON_COM<0x0, "SHR", srl>, BASIC_NORMAL<0x0, "SHR", srl>;
     defm SRA16 : BASIC_RR_NON_COM<0x0, "SHR", sra>, BASIC_NORMAL<0x0, "SHR", sra>;
     defm SHL16 : BASIC_RR_NON_COM<0x0, "SHL", shl>, BASIC_NORMAL<0x0, "SHL", shl>;
 
-    let Uses = [EX] in {
+    let Uses = [REX] in {
         defm ADC16 : BASIC_RR_IS_COM<0x0, "addc.w", adde>, BASIC_NORMAL<0x0, "addc.w", adde>;
         defm SBC16 : BASIC_RR_NON_COM<0x0, "subc.w", sube>, BASIC_NORMAL<0x0, "subc.w", sube>;
     }

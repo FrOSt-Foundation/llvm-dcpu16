@@ -1077,15 +1077,15 @@ DCPU16TargetLowering::EmitShiftInstr(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default: llvm_unreachable("Invalid shift opcode!");
   case DCPU16::Shl16:
-   Opc = DCPU16::SHL16r1;
+   Opc = DCPU16ISD::SHL;
    RC = &DCPU16::GR16RegClass;
    break;
   case DCPU16::Sra16:
-   Opc = DCPU16::SAR16r1;
+   Opc = DCPU16ISD::SRA;
    RC = &DCPU16::GR16RegClass;
    break;
   case DCPU16::Srl16:
-   Opc = DCPU16::SAR16r1c;
+   Opc = DCPU16ISD::SRA;
    RC = &DCPU16::GR16RegClass;
    break;
   }

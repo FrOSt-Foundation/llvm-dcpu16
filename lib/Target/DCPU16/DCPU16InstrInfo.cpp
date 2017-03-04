@@ -311,8 +311,6 @@ unsigned DCPU16InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case DCPU16II::SizeSpecial:
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unknown instruction size!");
-    case DCPU16::SAR16r1c:
-      return 4;
     }
   case DCPU16II::Size2Bytes:
     return 2;
