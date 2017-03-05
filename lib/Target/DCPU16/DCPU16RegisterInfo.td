@@ -34,7 +34,7 @@ def REX : DCPU16Reg<0x1d, "EX">;
 
 // Volatile registers
 def GR16 : RegisterClass<"DCPU16", [i16], 16,
-  (add RA, RB, RC, RX, RY, RZ, RI, RJ, SP)>;
+  (add RA, RB, RC, RX, RY, RZ, RI, RJ, RSP)>;
 
 // stack pointer register
 def SPR16 : RegisterClass<"DCPU16", [i16], 16,
