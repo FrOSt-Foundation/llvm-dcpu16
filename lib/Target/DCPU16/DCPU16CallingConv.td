@@ -30,8 +30,8 @@ def CC_DCPU16_AssignStack : CallingConv<[
   // Promote i8 arguments to i16.
   CCIfType<[i8], CCPromoteToType<i16>>,
 
-  // Integer values get stored in stack slots that are 2 bytes in
-  // size and 2-byte aligned.
-  CCIfType<[i16], CCAssignToStack<2, 2>>
+  // Integer values get stored in stack slots that are 1 byte in
+  // size and 1-byte aligned.
+  CCIfType<[i16], CCAssignToStack<1, 1>>
 ]>;
 

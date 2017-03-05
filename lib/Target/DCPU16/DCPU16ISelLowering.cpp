@@ -57,75 +57,43 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD,  VT, MVT::i1,  Promote);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1,  Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8,  Expand);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Expand);
   }
 
-  // We don't have any truncstores
-  setTruncStoreAction(MVT::i16, MVT::i8, Expand);
-
-  setOperationAction(ISD::SRA,              MVT::i8,    Promote);
-  setOperationAction(ISD::SHL,              MVT::i8,    Promote);
-  setOperationAction(ISD::SRL,              MVT::i8,    Promote);
   setOperationAction(ISD::SRA,              MVT::i16,   Custom);
   setOperationAction(ISD::SHL,              MVT::i16,   Custom);
   setOperationAction(ISD::SRL,              MVT::i16,   Custom);
-  setOperationAction(ISD::ROTL,             MVT::i8,    Promote);
-  setOperationAction(ISD::ROTR,             MVT::i8,    Promote);
   setOperationAction(ISD::ROTL,             MVT::i16,   Expand);
   setOperationAction(ISD::ROTR,             MVT::i16,   Expand);
-  setOperationAction(ISD::BSWAP,            MVT::i8,    Promote);
   setOperationAction(ISD::BSWAP,            MVT::i16,   Expand);
   setOperationAction(ISD::GlobalAddress,    MVT::i16,   Custom);
   setOperationAction(ISD::ExternalSymbol,   MVT::i16,   Custom);
   setOperationAction(ISD::BlockAddress,     MVT::i16,   Custom);
   setOperationAction(ISD::BR_JT,            MVT::Other, Expand);
-  setOperationAction(ISD::BR_CC,            MVT::i8,    Promote);
   setOperationAction(ISD::BR_CC,            MVT::i16,   Custom);
   setOperationAction(ISD::BRCOND,           MVT::Other, Expand);
-  setOperationAction(ISD::SETCC,            MVT::i8,    Promote);
   setOperationAction(ISD::SETCC,            MVT::i16,   Custom);
-  setOperationAction(ISD::SELECT,           MVT::i8,    Promote);
   setOperationAction(ISD::SELECT,           MVT::i16,   Expand);
-  setOperationAction(ISD::SELECT_CC,        MVT::i8,    Promote);
   setOperationAction(ISD::SELECT_CC,        MVT::i16,   Custom);
   setOperationAction(ISD::SIGN_EXTEND,      MVT::i16,   Custom);
-  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i8, Promote);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
-  setOperationAction(ISD::CTTZ,             MVT::i8,    Promote);
   setOperationAction(ISD::CTTZ,             MVT::i16,   Expand);
-  setOperationAction(ISD::CTLZ,             MVT::i8,    Promote);
   setOperationAction(ISD::CTLZ,             MVT::i16,   Expand);
-  setOperationAction(ISD::CTPOP,            MVT::i8,    Promote);
   setOperationAction(ISD::CTPOP,            MVT::i16,   Expand);
 
-  setOperationAction(ISD::SHL_PARTS,        MVT::i8,    Promote);
   setOperationAction(ISD::SHL_PARTS,        MVT::i16,   Expand);
-  setOperationAction(ISD::SRL_PARTS,        MVT::i8,    Promote);
   setOperationAction(ISD::SRL_PARTS,        MVT::i16,   Expand);
-  setOperationAction(ISD::SRA_PARTS,        MVT::i8,    Promote);
   setOperationAction(ISD::SRA_PARTS,        MVT::i16,   Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,   Expand);
 
   // FIXME: Implement efficiently multiplication by a constant
-  setOperationAction(ISD::MUL,              MVT::i8,    Promote);
-  setOperationAction(ISD::MULHS,            MVT::i8,    Promote);
-  setOperationAction(ISD::MULHU,            MVT::i8,    Promote);
-  setOperationAction(ISD::SMUL_LOHI,        MVT::i8,    Promote);
-  setOperationAction(ISD::UMUL_LOHI,        MVT::i8,    Promote);
   setOperationAction(ISD::MULHS,            MVT::i16,   Expand);
   setOperationAction(ISD::MULHU,            MVT::i16,   Expand);
   setOperationAction(ISD::SMUL_LOHI,        MVT::i16,   Expand);
   setOperationAction(ISD::UMUL_LOHI,        MVT::i16,   Expand);
 
-  setOperationAction(ISD::UDIV,             MVT::i8,    Promote);
-  setOperationAction(ISD::UDIVREM,          MVT::i8,    Promote);
-  setOperationAction(ISD::UREM,             MVT::i8,    Promote);
-  setOperationAction(ISD::SDIV,             MVT::i8,    Promote);
-  setOperationAction(ISD::SDIVREM,          MVT::i8,    Promote);
-  setOperationAction(ISD::SREM,             MVT::i8,    Promote);
   setOperationAction(ISD::UDIVREM,          MVT::i16,   Expand);
   setOperationAction(ISD::SDIV,             MVT::i16,   Expand);
   setOperationAction(ISD::SDIVREM,          MVT::i16,   Expand);
@@ -138,8 +106,8 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,           MVT::Other, Expand);
   setOperationAction(ISD::JumpTable,        MVT::i16,   Custom);
 
-  setMinFunctionAlignment(2);
-  setPrefFunctionAlignment(2);
+  setMinFunctionAlignment(1);
+  setPrefFunctionAlignment(1);
 }
 
 SDValue DCPU16TargetLowering::LowerOperation(SDValue Op,
