@@ -435,7 +435,7 @@ let Defs = [REX] in {
     defm DVI16 : BASIC_RR_NON_COM<0x0, "DVI", sdiv>, BASIC_NORMAL<0x0, "DVI", sdiv>;
     defm MOD16 : BASIC_RR_NON_COM<0x0, "MOD", urem>, BASIC_NORMAL<0x0, "MOD", urem>;
     defm SLR16 : BASIC_RR_NON_COM<0x0, "SHR", srl>, BASIC_NORMAL<0x0, "SHR", srl>;
-    defm SRA16 : BASIC_RR_NON_COM<0x0, "SHR", sra>, BASIC_NORMAL<0x0, "SHR", sra>;
+    defm SRA16 : BASIC_RR_NON_COM<0x0, "ASR", sra>, BASIC_NORMAL<0x0, "ASR", sra>;
     defm SHL16 : BASIC_RR_NON_COM<0x0, "SHL", shl>, BASIC_NORMAL<0x0, "SHL", shl>;
 
     let Uses = [REX] in {
