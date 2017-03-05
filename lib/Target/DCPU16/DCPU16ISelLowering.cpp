@@ -49,7 +49,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   // Provide all sorts of operation actions
-  setStackPointerRegisterToSaveRestore(DCPU16::RI);
+  setStackPointerRegisterToSaveRestore(DCPU16::RSP);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
@@ -536,7 +536,7 @@ SDValue DCPU16TargetLowering::LowerCCCCallTo(
       assert(VA.isMemLoc());
 
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::RI, PtrVT);
+        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::RSP, PtrVT);
 
       SDValue PtrOff =
           DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr,

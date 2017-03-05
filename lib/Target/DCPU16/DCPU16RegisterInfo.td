@@ -26,7 +26,7 @@ def RC  : DCPU16Reg<0x2, "C">;
 def RX  : DCPU16Reg<0x3, "X">;
 def RY  : DCPU16Reg<0x4, "Y">;
 def RZ  : DCPU16Reg<0x5, "Z">;
-def RI  : DCPU16Reg<0x6, "I">; // SP for now
+def RI  : DCPU16Reg<0x6, "I">;
 def RJ  : DCPU16Reg<0x7, "J">; // FP if needed
 
 def RSP : DCPU16Reg<0x1b, "SP">;

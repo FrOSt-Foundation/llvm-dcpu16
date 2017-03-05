@@ -39,12 +39,10 @@ const MCPhysReg*
 DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(*MF);
   static const MCPhysReg CalleeSavedRegs[] = {
-      //FIXME: Add RI when SP issue is fixed
-      DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RJ, 0
+      DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RI, DCPU16::RJ, 0
   };
   static const MCPhysReg CalleeSavedRegsFP[] = {
-    //FIXME: Add RI when SP issue is fixed
-    DCPU16::RX, DCPU16::RY, DCPU16::RZ, 0
+    DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RI, 0
   };
 
   if (TFI->hasFP(*MF))
@@ -60,7 +58,6 @@ BitVector DCPU16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Mark 3 special registers as reserved.
   Reserved.set(DCPU16::REX);
   Reserved.set(DCPU16::RSP);
-  Reserved.set(DCPU16::RI); // FIXME: remove RI when SP issue is fixed
 
   // Mark frame pointer as reserved if needed.
   if (TFI->hasFP(MF)) {
@@ -89,7 +86,7 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RI);
+  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RSP);
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
@@ -133,5 +130,5 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 unsigned DCPU16RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RI;
+  return TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RSP;
 }
