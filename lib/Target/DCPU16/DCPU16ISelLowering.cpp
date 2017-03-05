@@ -95,7 +95,6 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI,        MVT::i16,   Expand);
 
   setOperationAction(ISD::UDIVREM,          MVT::i16,   Expand);
-  setOperationAction(ISD::SDIV,             MVT::i16,   Expand);
   setOperationAction(ISD::SDIVREM,          MVT::i16,   Expand);
   setOperationAction(ISD::SREM,             MVT::i16,   Expand);
 
