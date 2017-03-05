@@ -24,14 +24,15 @@ def RetCC_DCPU16 : CallingConv<[
 // DCPU16 Argument Calling Conventions
 //===----------------------------------------------------------------------===//
 def CC_DCPU16_AssignStack : CallingConv<[
-  // Pass by value if the byval attribute is given
-  CCIfByVal<CCPassByVal<2, 2>>,
-
   // Promote i8 arguments to i16.
   CCIfType<[i8], CCPromoteToType<i16>>,
+
+  //the first 3 integers args of non var-args functions are passed in integer registers
+  CCIfNotVarArg<CCIfType<[i16], CCAssignToReg<[RA, RB, RC]>>>,
 
   // Integer values get stored in stack slots that are 1 byte in
   // size and 1-byte aligned.
   CCIfType<[i16], CCAssignToStack<1, 1>>
 ]>;
 
+def CSR_DCPU16 : CalleeSavedRegs<(add RX, RY, RZ, RI, RJ)>;

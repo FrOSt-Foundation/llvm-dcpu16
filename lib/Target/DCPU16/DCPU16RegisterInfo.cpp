@@ -51,6 +51,16 @@ DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CalleeSavedRegs;
 }
 
+const uint32_t *DCPU16RegisterInfo::getCallPreservedMask(const MachineFunction&, CallingConv::ID CallConv) const {
+    switch (CallConv) {
+        default:
+            llvm_unreachable("Unsupported calling conv");
+        case CallingConv::C:
+        case CallingConv::Fast:
+            return CSR_DCPU16_RegMask;
+    }
+}
+
 BitVector DCPU16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);

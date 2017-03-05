@@ -37,6 +37,7 @@ public:
   const DCPU16Subtarget *getSubtargetImpl(const Function &F) const override {
     return &Subtarget;
   }
+
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
