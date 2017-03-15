@@ -105,6 +105,20 @@ void DCPU16AsmPrinter::printSrcMemOperand(const MachineInstr *MI, int OpNum,
   const MachineOperand &Base = MI->getOperand(OpNum);
   const MachineOperand &Disp = MI->getOperand(OpNum+1);
 
+  // special case for PICK n syntax
+  if (Base.getReg() == DCPU16::SP) {
+      if (Disp.isImm()) {
+          if (Disp.getImm() == 0)
+              O << "PEEK";
+          else {
+              O << "PICK 0x";
+              O.write_hex((Disp.getImm()) & 0xFFFF);
+          }
+      } else
+          llvm_unreachable("Unsupported src mem expression in inline asm");
+      return;
+  }
+
   if (Base.getReg())
       O << '[';
 

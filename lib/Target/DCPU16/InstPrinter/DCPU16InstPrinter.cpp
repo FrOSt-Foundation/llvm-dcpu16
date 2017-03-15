@@ -65,6 +65,23 @@ void DCPU16InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Base = MI->getOperand(OpNo);
   const MCOperand &Disp = MI->getOperand(OpNo+1);
 
+  // special case for PICK n syntax
+  if (Base.getReg() == DCPU16::SP) {
+      if (Disp.isImm()) {
+          if (Disp.getImm() == 0)
+              O << "PEEK";
+          else {
+              O << "PICK 0x";
+              O.write_hex(Disp.getImm() & 0xFFFF);
+          }
+      } else {
+          assert(Disp.isExpr() && "Expected immediate or expression in displacement field");
+          O << "PICK ";
+          O << *Disp.getExpr();
+      }
+      return;
+  }
+
   // Print displacement first
 
   // If the global address expression is a part of displacement field with a
