@@ -299,10 +299,18 @@ SDValue DCPU16TargetLowering::LowerFormalArguments(
   case CallingConv::C:
   case CallingConv::Fast:
     return LowerCCCArguments(Chain, CallConv, isVarArg, Ins, dl, DAG, InVals);
-  case CallingConv::DCPU16_INTR:
-    if (Ins.empty())
-      return Chain;
-    report_fatal_error("ISRs cannot have arguments");
+  case CallingConv::DCPU16_INTR: {
+    if (Ins.size() != 1 || Ins[0].VT != MVT::i16)
+        report_fatal_error("ISRs cannot have arguments");
+
+    // copy to virtual register from A
+    MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
+    unsigned VReg = RegInfo.createVirtualRegister(&DCPU16::GR16RegClass);
+    RegInfo.addLiveIn(DCPU16::A, VReg);
+    SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i16);
+    InVals.push_back(ArgValue);
+    return Chain;
+  }
   }
 }
 

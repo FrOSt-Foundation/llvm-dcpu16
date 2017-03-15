@@ -45,10 +45,28 @@ DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, 0
   };
 
+  const Function* F = MF->getFunction();
+  // in interrupt handlers, the caller has to save all registers except A
+  static const uint16_t CalleeSavedRegsIntr[] = {
+      DCPU16::EX,
+      DCPU16::B, DCPU16::C,
+      DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, DCPU16::J,
+      0
+  };
+
+  static const uint16_t CalleeSavedRegsIntrFP[] = {
+      DCPU16::EX,
+      DCPU16::B, DCPU16::C,
+      DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I,
+      0
+  };
+
   if (TFI->hasFP(*MF))
-    return CalleeSavedRegsFP;
+    return F->getCallingConv() == CallingConv::DCPU16_INTR ? 
+        CalleeSavedRegsIntrFP : CalleeSavedRegsFP;
   else
-    return CalleeSavedRegs;
+    return F->getCallingConv() == CallingConv::DCPU16_INTR ?
+        CalleeSavedRegsIntr : CalleeSavedRegs;
 }
 
 const uint32_t *DCPU16RegisterInfo::getCallPreservedMask(const MachineFunction&, CallingConv::ID CallConv) const {
