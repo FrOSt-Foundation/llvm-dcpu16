@@ -206,7 +206,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    DCPU16::RA, DCPU16::RB, DCPU16::RC
+    DCPU16::A, DCPU16::B, DCPU16::C
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -659,8 +659,8 @@ SDValue DCPU16TargetLowering::LowerShifts(SDValue Op,
     case ISD::SHL:
       return DAG.getNode(DCPU16ISD::SHL, dl,
                          VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SA:
-      return DAG.getNode(DCPU16ISD::SA, dl,
+    case ISD::SRA:
+      return DAG.getNode(DCPU16ISD::SRA, dl,
                          VT, N->getOperand(0), N->getOperand(1));
     case ISD::SRL:
       return DAG.getNode(DCPU16ISD::SRL, dl,
@@ -879,7 +879,7 @@ SDValue DCPU16TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
-    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::REX,
+    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, DCPU16::EX,
                                     MVT::i16, Flag);
     if (Shift)
       // FIXME: somewhere this is turned into a SRL, lower it MSP specific?

@@ -231,8 +231,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
 
   if (!hasReservedCallFrame(MF)) {
     // If the stack pointer can be changed after prologue, turn the
-    // adjcallstackup instruction into a 'sub RI, <amt>' and the
-    // adjcallstackdown instruction into 'add RI, <amt>'
+    // adjcallstackup instruction into a 'sub I, <amt>' and the
+    // adjcallstackdown instruction into 'add I, <amt>'
     // TODO: consider using push / pop instead of sub + store / add
     MachineInstr &Old = *I;
     uint64_t Amount = Old.getOperand(0).getImm();
@@ -245,8 +245,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
       MachineInstr *New = nullptr;
       if (Old.getOpcode() == TII.getCallFrameSetupOpcode()) {
         New =
-            BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::RI)
-                .addReg(DCPU16::RI)
+            BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::I)
+                .addReg(DCPU16::I)
                 .addImm(Amount);
       } else {
         assert(Old.getOpcode() == TII.getCallFrameDestroyOpcode());
@@ -255,8 +255,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
         Amount -= CalleeAmt;
         if (Amount)
           New = BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::ADD16ri),
-                        DCPU16::RI)
-                    .addReg(DCPU16::RI)
+                        DCPU16::I)
+                    .addReg(DCPU16::I)
                     .addImm(Amount);
       }
 
@@ -274,8 +274,8 @@ MachineBasicBlock::iterator DCPU16FrameLowering::eliminateCallFramePseudoInstr(
     if (uint64_t CalleeAmt = I->getOperand(1).getImm()) {
       MachineInstr &Old = *I;
       MachineInstr *New =
-          BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::RI)
-              .addReg(DCPU16::RI)
+          BuildMI(MF, Old.getDebugLoc(), TII.get(DCPU16::SUB16ri), DCPU16::I)
+              .addReg(DCPU16::I)
               .addImm(CalleeAmt);
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();
