@@ -16,8 +16,8 @@ def RetCC_DCPU16 : CallingConv<[
   // promote i8 return values to i16
   CCIfType<[i8], CCPromoteToType<i16>>,
 
-  // i16 are returned in registers RA, RB, RC
-  CCIfType<[i16], CCAssignToReg<[RA, RB, RC]>>
+  // i16 are returned in registers A, B, C
+  CCIfType<[i16], CCAssignToReg<[A, B, C]>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -28,11 +28,11 @@ def CC_DCPU16_AssignStack : CallingConv<[
   CCIfType<[i8], CCPromoteToType<i16>>,
 
   //the first 3 integers args of non var-args functions are passed in integer registers
-  CCIfNotVarArg<CCIfType<[i16], CCAssignToReg<[RA, RB, RC]>>>,
+  CCIfNotVarArg<CCIfType<[i16], CCAssignToReg<[A, B, C]>>>,
 
   // Integer values get stored in stack slots that are 1 byte in
   // size and 1-byte aligned.
   CCIfType<[i16], CCAssignToStack<1, 1>>
 ]>;
 
-def CSR_DCPU16 : CalleeSavedRegs<(add RX, RY, RZ, RI, RJ)>;
+def CSR_DCPU16 : CalleeSavedRegs<(add X, Y, Z, I, J)>;

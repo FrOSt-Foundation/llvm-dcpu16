@@ -38,7 +38,7 @@ static MCInstrInfo *createDCPU16MCInstrInfo() {
 
 static MCRegisterInfo *createDCPU16MCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitDCPU16MCRegisterInfo(X, DCPU16::RA);
+  InitDCPU16MCRegisterInfo(X, DCPU16::A);
   return X;
 }
 

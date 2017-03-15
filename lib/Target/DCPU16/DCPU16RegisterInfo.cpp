@@ -33,16 +33,16 @@ using namespace llvm;
 
 // FIXME: Provide proper call frame setup / destroy opcodes.
 DCPU16RegisterInfo::DCPU16RegisterInfo()
-  : DCPU16GenRegisterInfo(DCPU16::RA) {}
+  : DCPU16GenRegisterInfo(DCPU16::A) {}
 
 const MCPhysReg*
 DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(*MF);
   static const MCPhysReg CalleeSavedRegs[] = {
-      DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RI, DCPU16::RJ, 0
+      DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, DCPU16::J, 0
   };
   static const MCPhysReg CalleeSavedRegsFP[] = {
-    DCPU16::RX, DCPU16::RY, DCPU16::RZ, DCPU16::RI, 0
+    DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, 0
   };
 
   if (TFI->hasFP(*MF))
@@ -65,13 +65,13 @@ BitVector DCPU16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);
 
-  // Mark 3 special registers as reserved.
-  Reserved.set(DCPU16::REX);
-  Reserved.set(DCPU16::RSP);
+  // Mark 2 special registers as reserved.
+  Reserved.set(DCPU16::EX);
+  Reserved.set(DCPU16::SP);
 
   // Mark frame pointer as reserved if needed.
   if (TFI->hasFP(MF)) {
-    Reserved.set(DCPU16::RJ);
+    Reserved.set(DCPU16::J);
   }
 
   return Reserved;
@@ -96,7 +96,7 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc dl = MI.getDebugLoc();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RSP);
+  unsigned BasePtr = (TFI->hasFP(MF) ? DCPU16::J : DCPU16::SP);
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
@@ -140,5 +140,5 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 unsigned DCPU16RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const DCPU16FrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? DCPU16::RJ : DCPU16::RSP;
+  return TFI->hasFP(MF) ? DCPU16::J : DCPU16::SP;
 }

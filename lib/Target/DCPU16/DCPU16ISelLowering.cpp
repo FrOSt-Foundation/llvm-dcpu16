@@ -49,7 +49,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   // Provide all sorts of operation actions
-  setStackPointerRegisterToSaveRestore(DCPU16::RSP);
+  setStackPointerRegisterToSaveRestore(DCPU16::SP);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
@@ -535,7 +535,7 @@ SDValue DCPU16TargetLowering::LowerCCCCallTo(
       assert(VA.isMemLoc());
 
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::RSP, PtrVT);
+        StackPtr = DAG.getCopyFromReg(Chain, dl, DCPU16::SP, PtrVT);
 
       SDValue PtrOff =
           DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr,
@@ -659,8 +659,8 @@ SDValue DCPU16TargetLowering::LowerShifts(SDValue Op,
     case ISD::SHL:
       return DAG.getNode(DCPU16ISD::SHL, dl,
                          VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SRA:
-      return DAG.getNode(DCPU16ISD::SRA, dl,
+    case ISD::SA:
+      return DAG.getNode(DCPU16ISD::SA, dl,
                          VT, N->getOperand(0), N->getOperand(1));
     case ISD::SRL:
       return DAG.getNode(DCPU16ISD::SRL, dl,
@@ -981,7 +981,7 @@ SDValue DCPU16TargetLowering::LowerFRAMEADDR(SDValue Op,
   SDLoc dl(Op);  // FIXME probably not meaningful
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                                         DCPU16::RJ, VT);
+                                         DCPU16::J, VT);
   while (Depth--)
     FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
                             MachinePointerInfo());

@@ -108,8 +108,8 @@ def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
 // a stack adjustment and the codegen must know that they may modify the stack
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
-// sub / ADDhich can clobber REX.
-let Defs = [RSP, REX], Uses = [RSP] in {
+// sub / ADDhich can clobber EX.
+let Defs = [SP, EX], Uses = [SP] in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i16imm:$amt),
                               "#ADJCALLSTACKDOWN",
                               [(DCPU16callseq_start timm:$amt)]>;
@@ -123,7 +123,7 @@ let usesCustomInserter = 1 in {
                         "# Select16 PSEUDO",
                         [(set GR16:$dst,
                           (DCPU16selectcc GR16:$src, GR16:$src2, imm:$cc))]>;
-  let Defs = [REX] in {
+  let Defs = [EX] in {
   def Shl16    : Pseudo<(outs GR16:$dst), (ins GR16:$src, GR16:$cnt),
                         "# Shl16 PSEUDO",
                         [(set GR16:$dst, (DCPU16shl GR16:$src, GR16:$cnt))]>;
@@ -176,7 +176,7 @@ let isBarrier = 1 in {
 }
 
 // Conditional branches
-let Uses = [REX] in
+let Uses = [EX] in
   def JCC : CJForm<0, 0,
                    (outs), (ins jmptarget:$dst, cc:$cc),
                    "$cc\t$dst",
@@ -187,12 +187,12 @@ let Uses = [REX] in
 //  Call Instructions...
 //
 let isCall = 1 in
-  // All calls clobber the non-callee saved registers. RSP is marked as
+  // All calls clobber the non-callee saved registers. SP is marked as
   // a use to prevent stack-pointer assignments that appear immediately
   // before calls from potentially appearing dead. Uses for argument
   // registers are added manually.
-  let Defs = [REX],
-      Uses = [RSP] in {
+  let Defs = [EX],
+      Uses = [SP] in {
     def CALLi     : II16i<0x0,
                           (outs), (ins i16imm:$dst),
                           "JSR\t$dst", [(DCPU16call imm:$dst)]>;
@@ -208,7 +208,7 @@ let isCall = 1 in
 //===----------------------------------------------------------------------===//
 //  Miscellaneous Instructions...
 //
-let Defs = [RSP], Uses = [RSP], hasSideEffects=0 in {
+let Defs = [SP], Uses = [SP], hasSideEffects=0 in {
 let mayLoad = 1 in
 def POP16r   : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
                        (outs GR16:$reg), (ins), "SET\t{$reg, POP}", []>;
@@ -261,7 +261,7 @@ def MOV16mm : I16mm<0x0,
 
 //===----------------------------------------------------------------------===//
 // Integer comparisons
-let Defs = [REX] in {
+let Defs = [EX] in {
 def CMP16rr : I16rr<0x0,
                     (outs), (ins GR16:$src, GR16:$src2),
                     "SET\tEX, 0xFFFF\n"
@@ -269,7 +269,7 @@ def CMP16rr : I16rr<0x0,
                     "SET\tEX, 0\n"
                     "IFG\t{$src, $src2}\n"
                     "SET\tEX, 1",
-                    [(DCPU16cmp GR16:$src, GR16:$src2), (implicit REX)]>;
+                    [(DCPU16cmp GR16:$src, GR16:$src2), (implicit EX)]>;
 
 def CMP16ri : I16ri<0x0,
                     (outs), (ins GR16:$src, i16imm:$src2),
@@ -278,7 +278,7 @@ def CMP16ri : I16ri<0x0,
                     "SET\tEX, 0\n"
                     "IFG\t{$src, $src2}\n"
                     "SET\tEX, 1",
-                    [(DCPU16cmp GR16:$src, imm:$src2), (implicit REX)]>;
+                    [(DCPU16cmp GR16:$src, imm:$src2), (implicit EX)]>;
 
 def CMP16mi : I16mi<0x0,
                     (outs), (ins memsrc:$src, i16imm:$src2),
@@ -288,7 +288,7 @@ def CMP16mi : I16mi<0x0,
                     "IFG\t{$src, $src2}\n"
                     "SET\tEX, 1",
                      [(DCPU16cmp (load addr:$src),
-                                 (i16 imm:$src2)), (implicit REX)]>;
+                                 (i16 imm:$src2)), (implicit EX)]>;
 
 def CMP16rm : I16rm<0x0,
                     (outs), (ins GR16:$src, memsrc:$src2),
@@ -298,7 +298,7 @@ def CMP16rm : I16rm<0x0,
                     "IFG\t{$src, $src2}\n"
                     "SET\tEX, 1",
                     [(DCPU16cmp GR16:$src, (load addr:$src2)),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 def CMP16mr : I16mr<0x0,
                     (outs), (ins memsrc:$src, GR16:$src2),
@@ -308,7 +308,7 @@ def CMP16mr : I16mr<0x0,
                     "IFG\t{$src, $src2}\n"
                     "SET\tEX, 1",
                     [(DCPU16cmp (load addr:$src), GR16:$src2), 
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 
 // BIT TESTS, just sets condition codes
@@ -318,31 +318,31 @@ def BIT16rr : I16rr<0x0,
                     (outs), (ins GR16:$src, GR16:$src2),
                     "bit.w\t{$src2, $src}",
                     [(DCPU16cmp (and_su GR16:$src, GR16:$src2), 0),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 }
 def BIT16ri : I16ri<0x0,
                     (outs), (ins GR16:$src, i16imm:$src2),
                     "bit.w\t{$src2, $src}",
                     [(DCPU16cmp (and_su GR16:$src, imm:$src2), 0),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 def BIT16rm : I16rm<0x0,
                     (outs), (ins GR16:$src, memdst:$src2),
                     "bit.w\t{$src2, $src}",
                     [(DCPU16cmp (and_su GR16:$src,  (load addr:$src2)), 0),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 def BIT16mr : I16mr<0x0,
                     (outs), (ins memsrc:$src, GR16:$src2),
                     "bit.w\t{$src2, $src}",
                     [(DCPU16cmp (and_su (load addr:$src), GR16:$src2), 0),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 def BIT16mi : I16mi<0x0,
                     (outs), (ins memsrc:$src, i16imm:$src2),
                     "bit.w\t{$src2, $src}",
                     [(DCPU16cmp (and_su (load addr:$src), (i16 imm:$src2)), 0),
-                     (implicit REX)]>;
+                     (implicit EX)]>;
 
 def BIT16mm : I16mm<0x0,
                     (outs), (ins memsrc:$src, memsrc:$src2),
@@ -350,8 +350,8 @@ def BIT16mm : I16mm<0x0,
                     [(DCPU16cmp (and_su (i16 (load addr:$src)),
                                         (load addr:$src2)),
                                  0),
-                     (implicit REX)]>;
-} // Defs = [REX]
+                     (implicit EX)]>;
+} // Defs = [EX]
 
 //===----------------------------------------------------------------------===//
 // Multiclass for instructions
@@ -362,7 +362,7 @@ multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
     }
 }
 
@@ -372,7 +372,7 @@ multiclass BASIC_RR_NON_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
     }
 }
 
@@ -382,13 +382,13 @@ multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, (load addr:$src2))),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
 
         def ri: I16ri<OpVal,
                         (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
                         OpcStr#"\t{$dst, $src2}",
                         [(set GR16:$dst, (OpNode GR16:$src, imm:$src2)),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
     }
 
     let Constraints = "" in {
@@ -396,19 +396,19 @@ multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs), (ins memdst:$dst, GR16:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), GR16:$src), addr:$dst),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
 
         def mi: I16mi<OpVal,
                         (outs), (ins memdst:$dst, i16imm:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), (i16 imm:$src)), addr:$dst),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
 
         def mm: I16mm<OpVal,
                         (outs), (ins memdst:$dst, memsrc:$src),
                         OpcStr#"\t{$dst, $src}",
                         [(store (OpNode (load addr:$dst), (i16 (load addr:$src))), addr:$dst),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
     }
 
     //FIXME: wrong zero extend
@@ -417,14 +417,14 @@ multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
                         (outs GR16:$dst), (ins GR16:$src, memsrc:$src2),
                         OpcStr#"\t{$dst, $src}",
                         [(set GR16:$dst, (OpNode GR16:$src, (zextloadi8 addr:$src2))),
-                        (implicit REX)]>;
+                        (implicit EX)]>;
     }
 }
 
 //===------------------------------------------------------------------------===//
 //Instructions
 
-let Defs = [REX] in {
+let Defs = [EX] in {
     defm ADD16 : BASIC_RR_IS_COM<0x0, "ADD", add>, BASIC_NORMAL<0x0, "ADD", add>;
     defm AND16 : BASIC_RR_IS_COM<0x0, "AND", and>, BASIC_NORMAL<0x0, "AND", and>;
     defm OR16  : BASIC_RR_IS_COM<0x0, "BOR", or>, BASIC_NORMAL<0x0, "BOR", or>;
@@ -438,7 +438,7 @@ let Defs = [REX] in {
     defm SRA16 : BASIC_RR_NON_COM<0x0, "ASR", sra>, BASIC_NORMAL<0x0, "ASR", sra>;
     defm SHL16 : BASIC_RR_NON_COM<0x0, "SHL", shl>, BASIC_NORMAL<0x0, "SHL", shl>;
 
-    let Uses = [REX] in {
+    let Uses = [EX] in {
         defm ADC16 : BASIC_RR_IS_COM<0x0, "ADX", adde>, BASIC_NORMAL<0x0, "ADX", adde>;
         defm SBC16 : BASIC_RR_NON_COM<0x0, "SUX", sube>, BASIC_NORMAL<0x0, "SUX", sube>;
     }
