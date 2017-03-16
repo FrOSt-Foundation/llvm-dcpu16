@@ -414,8 +414,8 @@ SDValue DCPU16TargetLowering::LowerCCCArguments(
         InVal = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
       } else {
         // Load the argument to a virtual register
-        unsigned ObjSize = VA.getLocVT().getSizeInBits()/8;
-        if (ObjSize > 2) {
+        unsigned ObjSize = VA.getLocVT().getSizeInBits() / 16;
+        if (ObjSize != 1) {
             errs() << "LowerFormalArguments Unhandled argument type: "
                 << EVT(VA.getLocVT()).getEVTString()
                 << "\n";

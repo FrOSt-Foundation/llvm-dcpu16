@@ -37,12 +37,8 @@ DCPU16RegisterInfo::DCPU16RegisterInfo()
 
 const MCPhysReg*
 DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  const DCPU16FrameLowering *TFI = getFrameLowering(*MF);
   static const MCPhysReg CalleeSavedRegs[] = {
       DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, DCPU16::J, 0
-  };
-  static const MCPhysReg CalleeSavedRegsFP[] = {
-    DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I, 0
   };
 
   const Function* F = MF->getFunction();
@@ -54,19 +50,8 @@ DCPU16RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       0
   };
 
-  static const uint16_t CalleeSavedRegsIntrFP[] = {
-      DCPU16::EX,
-      DCPU16::B, DCPU16::C,
-      DCPU16::X, DCPU16::Y, DCPU16::Z, DCPU16::I,
-      0
-  };
-
-  if (TFI->hasFP(*MF))
-    return F->getCallingConv() == CallingConv::DCPU16_INTR ? 
-        CalleeSavedRegsIntrFP : CalleeSavedRegsFP;
-  else
-    return F->getCallingConv() == CallingConv::DCPU16_INTR ?
-        CalleeSavedRegsIntr : CalleeSavedRegs;
+  return F->getCallingConv() == CallingConv::DCPU16_INTR ?
+      CalleeSavedRegsIntr : CalleeSavedRegs;
 }
 
 const uint32_t *DCPU16RegisterInfo::getCallPreservedMask(const MachineFunction&, CallingConv::ID CallConv) const {
@@ -118,12 +103,10 @@ DCPU16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
-  Offset += 2;
+  Offset += 1;
 
   if (!TFI->hasFP(MF))
     Offset += MF.getFrameInfo().getStackSize();
-  else
-    Offset += 2; // Skip the saved FP
 
   // Fold imm into offset
   Offset += MI.getOperand(FIOperandNum + 1).getImm();

@@ -51,12 +51,8 @@ void DCPU16FrameLowering::emitPrologue(MachineFunction &MF,
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI.getStackSize();
 
-  uint64_t NumBytes = 0;
+  uint64_t NumBytes = StackSize - DCPU16FI->getCalleeSavedFrameSize();
   if (hasFP(MF)) {
-    // Calculate required stack adjustment
-    uint64_t FrameSize = StackSize - 2;
-    NumBytes = FrameSize - DCPU16FI->getCalleeSavedFrameSize();
-
     // Get the offset of the stack slot for the EBP register... which is
     // guaranteed to be the last slot by processFunctionBeforeFrameFinalized.
     // Update the frame offset adjustment.
@@ -75,8 +71,7 @@ void DCPU16FrameLowering::emitPrologue(MachineFunction &MF,
          I != E; ++I)
       I->addLiveIn(DCPU16::J);
 
-  } else
-    NumBytes = StackSize - DCPU16FI->getCalleeSavedFrameSize();
+  }
 
   // Skip the callee-saved push instructions.
   while (MBBI != MBB.end() && (MBBI->getOpcode() == DCPU16::PUSH16r))
@@ -124,17 +119,12 @@ void DCPU16FrameLowering::emitEpilogue(MachineFunction &MF,
   // Get the number of bytes to allocate from the FrameInfo
   uint64_t StackSize = MFI.getStackSize();
   unsigned CSSize = DCPU16FI->getCalleeSavedFrameSize();
-  uint64_t NumBytes = 0;
+  uint64_t NumBytes = StackSize - CSSize;
 
   if (hasFP(MF)) {
-    // Calculate required stack adjustment
-    uint64_t FrameSize = StackSize - 2;
-    NumBytes = FrameSize - CSSize;
-
     // pop JJ.
     BuildMI(MBB, MBBI, DL, TII.get(DCPU16::POP16r), DCPU16::J);
-  } else
-    NumBytes = StackSize - CSSize;
+  }
 
   // Skip the callee-saved pop instructions.
   while (MBBI != MBB.begin()) {
