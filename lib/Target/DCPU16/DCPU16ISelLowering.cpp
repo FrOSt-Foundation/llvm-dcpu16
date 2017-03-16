@@ -44,6 +44,7 @@ DCPU16TargetLowering::DCPU16TargetLowering(const TargetMachine &TM,
 
   // Set up the register classes.
   addRegisterClass(MVT::i16, &DCPU16::GR16RegClass);
+  addRegisterClass(MVT::i16, &DCPU16::GEXR16RegClass);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());

@@ -25,6 +25,6 @@ DCPU16MCAsmInfo::DCPU16MCAsmInfo(const Triple &TT) {
   CommentString = ";";
 
   AlignmentIsInBytes = false;
-  UsesELFSectionDirectiveForBSS = true;
+  UsesELFSectionDirectiveForBSS = false;
   HasDotTypeDotSizeDirective = false;
 }

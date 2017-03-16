@@ -166,9 +166,9 @@ let isBarrier = 1 in {
     def Bi  : I16ri<0, (outs), (ins i16imm:$brdst),
                     "SET\t{PC, $brdst}",
                     [(brind tblockaddress:$brdst)]>;
-    def Br  : I16rr<0, (outs), (ins GR16:$brdst),
+    def Br  : I16rr<0, (outs), (ins GEXR16:$brdst),
                     "SET\t{PC, $brdst}",
-                    [(brind GR16:$brdst)]>;
+                    [(brind GEXR16:$brdst)]>;
     def Bm  : I16rm<0, (outs), (ins memsrc:$brdst),
                     "SET\t{PC, $brdst}",
                     [(brind (load addr:$brdst))]>;
@@ -197,8 +197,8 @@ let isCall = 1 in
                           (outs), (ins i16imm:$dst),
                           "JSR\t$dst", [(DCPU16call imm:$dst)]>;
     def CALLr     : II16r<0x0,
-                          (outs), (ins GR16:$dst),
-                          "JSR\t$dst", [(DCPU16call GR16:$dst)]>;
+                          (outs), (ins GEXR16:$dst),
+                          "JSR\t$dst", [(DCPU16call GEXR16:$dst)]>;
     def CALLm     : II16m<0x0,
                           (outs), (ins memsrc:$dst),
                           "JSR\t${dst:mem}", [(DCPU16call (load addr:$dst))]>;
@@ -211,11 +211,11 @@ let isCall = 1 in
 let Defs = [SP], Uses = [SP], hasSideEffects=0 in {
 let mayLoad = 1 in
 def POP16r   : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
-                       (outs GR16:$reg), (ins), "SET\t{$reg, POP}", []>;
+                       (outs GEXR16:$reg), (ins), "SET\t{$reg, POP}", []>;
 
 let mayStore = 1 in
 def PUSH16r  : II16r<0x0,
-                     (outs), (ins GR16:$reg), "SET\t{PUSH, $reg}",[]>;
+                     (outs), (ins GEXR16:$reg), "SET\t{PUSH, $reg}",[]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -224,7 +224,7 @@ def PUSH16r  : II16r<0x0,
 // FIXME: Provide proper encoding!
 let hasSideEffects = 0 in {
 def MOV16rr : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src),
+                    (outs GEXR16:$dst), (ins GEXR16:$src),
                     "SET\t{$dst, $src}",
                     []>;
 }
@@ -232,16 +232,16 @@ def MOV16rr : I16rr<0x0,
 // FIXME: Provide proper encoding!
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def MOV16ri : I16ri<0x0,
-                    (outs GR16:$dst), (ins i16imm:$src),
+                    (outs GEXR16:$dst), (ins i16imm:$src),
                     "SET\t{$dst, $src}",
-                    [(set GR16:$dst, imm:$src)]>;
+                    [(set GEXR16:$dst, imm:$src)]>;
 }
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
 def MOV16rm : I16rm<0x0,
-                    (outs GR16:$dst), (ins memsrc:$src),
+                    (outs GEXR16:$dst), (ins memsrc:$src),
                     "SET\t{$dst, $src}",
-                    [(set GR16:$dst, (load addr:$src))]>;
+                    [(set GEXR16:$dst, (load addr:$src))]>;
 }
 
 def MOV16mi : I16mi<0x0,
@@ -250,9 +250,9 @@ def MOV16mi : I16mi<0x0,
                     [(store (i16 imm:$src), addr:$dst)]>;
 
 def MOV16mr : I16mr<0x0,
-                    (outs), (ins memdst:$dst, GR16:$src),
+                    (outs), (ins memdst:$dst, GEXR16:$src),
                     "SET\t{$dst, $src}",
-                    [(store GR16:$src, addr:$dst)]>;
+                    [(store GEXR16:$src, addr:$dst)]>;
 
 def MOV16mm : I16mm<0x0,
                     (outs), (ins memdst:$dst, memsrc:$src),
@@ -359,9 +359,9 @@ def BIT16mm : I16mm<0x0,
 multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
     let Constraints = "$src = $dst", isCommutable = 1 in {
         def rr: I16rr<OpVal, 
-                        (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                        (outs GR16:$dst), (ins GR16:$src, GEXR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
-                        [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
+                        [(set GR16:$dst, (OpNode GR16:$src, GEXR16:$src2)),
                         (implicit EX)]>;
     }
 }
@@ -369,9 +369,9 @@ multiclass BASIC_RR_IS_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
 multiclass BASIC_RR_NON_COM<bits<4> OpVal, string OpcStr, SDNode OpNode> {
     let Constraints = "$src = $dst" in {
         def rr: I16rr<OpVal,
-                        (outs GR16:$dst), (ins GR16:$src, GR16:$src2),
+                        (outs GR16:$dst), (ins GR16:$src, GEXR16:$src2),
                         OpcStr#"\t{$dst, $src2}",
-                        [(set GR16:$dst, (OpNode GR16:$src, GR16:$src2)),
+                        [(set GR16:$dst, (OpNode GR16:$src, GEXR16:$src2)),
                         (implicit EX)]>;
     }
 }
@@ -393,9 +393,9 @@ multiclass BASIC_NORMAL<bits<4> OpVal, string OpcStr, SDNode OpNode> {
 
     let Constraints = "" in {
         def mr: I16mr<OpVal,
-                        (outs), (ins memdst:$dst, GR16:$src),
+                        (outs), (ins memdst:$dst, GEXR16:$src),
                         OpcStr#"\t{$dst, $src}",
-                        [(store (OpNode (load addr:$dst), GR16:$src), addr:$dst),
+                        [(store (OpNode (load addr:$dst), GEXR16:$src), addr:$dst),
                         (implicit EX)]>;
 
         def mi: I16mi<OpVal,

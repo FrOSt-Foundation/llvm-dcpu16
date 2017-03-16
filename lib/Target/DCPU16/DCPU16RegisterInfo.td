@@ -45,3 +45,7 @@ def OR16 : RegisterClass<"DCPU16", [i16], 16,
     (add EX)> {
         let isAllocatable = 0;
 }
+
+// both volatile registers and EX
+def GEXR16 : RegisterClass<"DCPU16", [i16], 16,
+    (add GR16, EX)>;
