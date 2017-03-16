@@ -68,8 +68,6 @@ void DCPU16AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     O << DCPU16InstPrinter::getRegisterName(MO.getReg());
     return;
   case MachineOperand::MO_Immediate:
-    if (!Modifier || strcmp(Modifier, "nohash"))
-      O << '#';
     O << MO.getImm();
     return;
   case MachineOperand::MO_MachineBasicBlock:
@@ -79,21 +77,15 @@ void DCPU16AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     bool isMemOp  = Modifier && !strcmp(Modifier, "mem");
     uint64_t Offset = MO.getOffset();
 
-    // If the global address expression is a part of displacement field with a
-    // register base, we should not emit any prefix symbol here, e.g.
-    //   SET r1, &foo
-    // vs
-    //   SET r2, glb(r1)
-    // Otherwise (!) dcpu16-as will silently miscompile the output :(
-    if (!Modifier || strcmp(Modifier, "nohash"))
-      O << (isMemOp ? '&' : '#');
-    if (Offset)
-      O << '(' << Offset << '+';
+    if (isMemOp)
+        O << "[";
 
     getSymbol(MO.getGlobal())->print(O, MAI);
 
     if (Offset)
-      O << ')';
+        O << " + " << Offset;
+    if (isMemOp)
+        O << ']';
 
     return;
   }
